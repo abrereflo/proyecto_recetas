@@ -12,9 +12,15 @@ import type { Address, Hex } from 'viem';
  * The keys below are the public, well-known Anvil development keys. They are
  * worthless outside a local node and are checked in deliberately so the demo
  * runs with zero setup. Nothing here may ever be reused on a public network.
+ *
+ * The table is deliberately module-private: the accessors at the bottom of this
+ * file are the only way to reach a key, and every one of them takes a
+ * `CliConfig` and runs `assertLocalChain` first. A new command therefore cannot
+ * sign with a demo key without declaring which chain it is signing on — the
+ * type checker asks for the config, so there is no `if` left to forget.
  */
 
-export const ANVIL_ACCOUNTS = {
+const ANVIL_ACCOUNTS = {
   doctor: {
     label: 'Dra. Claudia Mendoza Rojas',
     privateKey: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80' as Hex,
@@ -126,6 +132,73 @@ export interface DemoActor {
   privateKey: Hex;
 }
 
-export function pharmacyAccount(key: PharmacyKey): DemoActor {
+/**
+ * Chain ids where the checked-in keys above are safe to use: Anvil's default
+ * and the legacy development id.
+ */
+export const LOCAL_CHAIN_IDS: readonly number[] = [31337, 1337];
+
+export function isLocalChain(chainId: number): boolean {
+  return LOCAL_CHAIN_IDS.includes(chainId);
+}
+
+/**
+ * The gate in front of every checked-in private key.
+ *
+ * The comment at the top of this file states the rule; this function is what
+ * enforces it. `assertLocalEas` already refuses to attest or revoke against a
+ * real EAS, but it never covered `issue` and `dispense`, which are the two
+ * commands that sign. Pointing `CHAIN_ID` at Base Sepolia — the documented next
+ * step of the project — would otherwise sign real public-network transactions
+ * with keys that ship inside every Foundry installation.
+ */
+function assertLocalChain(config: CliConfig, action: string): void {
+  if (isLocalChain(config.chainId)) return;
+
+  throw new Error(
+    `Se intentó ${action} en la red ${config.chainId} con una clave de demostración.\n` +
+      'Las claves incluidas en el repositorio son las cuentas públicas de Anvil: ' +
+      'cualquiera las tiene, así que fuera de una cadena local no son un secreto.\n' +
+      `Redes permitidas: ${LOCAL_CHAIN_IDS.join(', ')}.\n` +
+      'Para operar en una red pública, configure una cuenta propia; no reutilice estas claves.',
+  );
+}
+
+export function doctorAccount(config: CliConfig): DemoActor {
+  assertLocalChain(config, 'emitir una receta');
+  return ANVIL_ACCOUNTS.doctor;
+}
+
+export function pharmacyAccount(key: PharmacyKey, config: CliConfig): DemoActor {
+  assertLocalChain(config, 'dispensar una receta');
   return key === 'a' ? ANVIL_ACCOUNTS.pharmacyA : ANVIL_ACCOUNTS.pharmacyB;
+}
+
+/**
+ * The credential authority's key, used to attest and to revoke in EAS.
+ *
+ * `assertLocalEas` already refuses to write to anything but the local MockEAS,
+ * and it stays: it checks the identity of the contract being written to, which
+ * is a different question from the one asked here. This gate answers whether
+ * the chain itself is one where a checked-in key means nothing.
+ */
+export function credentialIssuerAccount(config: CliConfig): DemoActor {
+  assertLocalChain(config, 'emitir o revocar una credencial profesional');
+  return ANVIL_ACCOUNTS.credentialIssuer;
+}
+
+/** The three accounts `setup-credentials` accredits before the demo runs. */
+export interface DemoHolders {
+  doctor: DemoActor;
+  pharmacyA: DemoActor;
+  pharmacyB: DemoActor;
+}
+
+export function demoHolderAccounts(config: CliConfig): DemoHolders {
+  assertLocalChain(config, 'acreditar las cuentas de demostración');
+  return {
+    doctor: ANVIL_ACCOUNTS.doctor,
+    pharmacyA: ANVIL_ACCOUNTS.pharmacyA,
+    pharmacyB: ANVIL_ACCOUNTS.pharmacyB,
+  };
 }

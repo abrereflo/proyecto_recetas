@@ -68,7 +68,7 @@ export async function runDispense(
   pharmacyKey: PharmacyKey,
 ): Promise<DispenseResult> {
   const publicClient = buildPublicClient(config);
-  const pharmacy = pharmacyAccount(pharmacyKey);
+  const pharmacy = pharmacyAccount(pharmacyKey, config);
   const account = accountOf(pharmacy.privateKey);
   const walletClient = buildWalletClient(config, pharmacy.privateKey);
   const contentHash = qr.contentHash as Hex;

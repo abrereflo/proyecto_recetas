@@ -1,6 +1,6 @@
 import type { PublicClient } from 'viem';
 import { accountOf, assertChainReachable, blockTimestamp, buildPublicClient } from '../chain';
-import { ANVIL_ACCOUNTS, type CliConfig } from '../config';
+import { pharmacyAccount as demoPharmacy, type CliConfig } from '../config';
 import {
   assertLocalEas,
   inspectCredential,
@@ -151,7 +151,7 @@ async function runRevokedDemo(config: CliConfig, options: DemoOptions): Promise<
   const issued = await runIssue(config, options);
   await ui.pause(pauseMs);
 
-  const pharmacy = ANVIL_ACCOUNTS.pharmacyA;
+  const pharmacy = demoPharmacy('a', config);
   const pharmacyAccount = accountOf(pharmacy.privateKey);
 
   ui.line();

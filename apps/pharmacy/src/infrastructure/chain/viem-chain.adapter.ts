@@ -153,6 +153,19 @@ export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainP
 
       const transactionHash = await walletClient.writeContract(request as never);
       const receipt = await publicClient.waitForTransactionReceipt({ hash: transactionHash });
+
+      // The simulation above refuses the ordinary cases, but it cannot refuse a
+      // race: another pharmacy dispensing between the simulation and inclusion
+      // leaves a reverted transaction that `waitForTransactionReceipt` still
+      // resolves. Reading `status` is what stops P5 from printing a receipt for
+      // a dispensation the chain rejected.
+      if (receipt.status !== 'success') {
+        throw new Error(
+          `La transacción ${transactionHash} revirtió en la cadena. ` +
+            'La receta no fue dispensada: vuelva a verificarla antes de entregar.',
+        );
+      }
+
       const block = await publicClient.getBlock({ blockNumber: receipt.blockNumber });
 
       return {

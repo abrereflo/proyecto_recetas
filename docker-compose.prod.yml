@@ -1,0 +1,143 @@
+# ---------------------------------------------------------------------------
+# Production deployment.
+#
+# Deployed to a droplet that already runs the sigdoc stack (postgres, minio,
+# gotenberg, api, nginx) and Traefik. Traefik is deployed ONCE per droplet
+# (infra/traefik in the sigdoc repository) and is NOT part of this file: this
+# compose file only attaches to the existing external `traefik-public` network
+# and labels each public-facing service, exactly as sigdoc's
+# docker-compose.prod.yml does. See docs/19-despliegue.md.
+#
+# No Anvil here: production points at Base Sepolia (chainId 84532). Anvil is
+# the local development chain only (see docker-compose.yml).
+#
+# Two public hostnames instead of sigdoc's one: the pharmacy app is a PWA with
+# a service worker (apps/pharmacy/public/sw.js), and a service worker's scope
+# is bound to the origin that served it, so it needs its own hostname,
+# separate from the doctor SPA.
+#
+# Memory caps on every service: this droplet is a single shared 1 vCPU / 2 GB
+# box that already runs the sigdoc stack. mem_limit is a cap, not a
+# reservation (same convention as sigdoc's docker-compose.prod.yml). No cpus
+# cap: with a single vCPU, a cpus limit is either a no-op at 1.0 or rejected
+# by Docker above 1.0.
+# ---------------------------------------------------------------------------
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: recetas-postgres
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - recetas-network
+    # No published port and NOT on traefik-public: Postgres is reached only by
+    # the api container, over the internal network.
+
+  api:
+    # RECETAS_IMAGE_TAG pins this deploy to an immutable per-commit build
+    # (sha-<gitsha>, pushed by the CI build jobs) so the running image is
+    # reproducible and rollback-able. The :-latest default preserves the prior
+    # behavior for any manual `docker compose` invocation with the var unset.
+    image: ghcr.io/rafaseros/recetas-api:${RECETAS_IMAGE_TAG:-latest}
+    container_name: recetas-api
+    restart: unless-stopped
+    mem_limit: 320m
+    # env_file forwards every variable from /opt/docker/apps/recetas/.env to
+    # the container (chain RPC, EAS addresses, LOG_LEVEL, etc). The explicit
+    # environment block below OVERRIDES the values that differ inside the
+    # Docker network (internal Postgres hostname) or that must never drift
+    # from what the Traefik labels below expose (NODE_ENV, CORS_ORIGIN) —
+    # same belt-and-suspenders pattern as sigdoc's ENABLE_DEV_RESET override.
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # Pin CORS to the two public origins (match the Traefik Host() rules
+      # below). Comma-separated list — see services/api/src/env.ts
+      # (parseCorsOrigins) for the exact parsing contract.
+      CORS_ORIGIN: "https://recetas.devrafaseros.com,https://farmacia.devrafaseros.com"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/health > /dev/null"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    networks:
+      - recetas-network
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.recetas-api.rule=Host(`recetas.devrafaseros.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.recetas-api.entrypoints=websecure"
+      - "traefik.http.routers.recetas-api.tls.certresolver=letsencrypt"
+      # Unlike sigdoc's API_V1_PREFIX (baked into its own app so PathPrefix
+      # forwards straight through), THIS app registers its routes at the root
+      # (`/health`, `/prescriptions`, see services/api/src/routes/*.ts) — it
+      # has no internal /api prefix. Without stripping /api here, every
+      # request Traefik forwards would 404 against the container. This
+      # middleware strips it before the request reaches the api container.
+      - "traefik.http.routers.recetas-api.middlewares=recetas-api-stripprefix"
+      - "traefik.http.middlewares.recetas-api-stripprefix.stripprefix.prefixes=/api"
+      - "traefik.http.services.recetas-api.loadbalancer.server.port=3000"
+
+  doctor:
+    image: ghcr.io/rafaseros/recetas-doctor:${RECETAS_IMAGE_TAG:-latest}
+    container_name: recetas-doctor
+    restart: unless-stopped
+    mem_limit: 64m
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.recetas-doctor.rule=Host(`recetas.devrafaseros.com`)"
+      - "traefik.http.routers.recetas-doctor.entrypoints=websecure"
+      - "traefik.http.routers.recetas-doctor.tls.certresolver=letsencrypt"
+      - "traefik.http.services.recetas-doctor.loadbalancer.server.port=80"
+
+  pharmacy:
+    image: ghcr.io/rafaseros/recetas-pharmacy:${RECETAS_IMAGE_TAG:-latest}
+    container_name: recetas-pharmacy
+    restart: unless-stopped
+    mem_limit: 64m
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.recetas-pharmacy.rule=Host(`farmacia.devrafaseros.com`)"
+      - "traefik.http.routers.recetas-pharmacy.entrypoints=websecure"
+      - "traefik.http.routers.recetas-pharmacy.tls.certresolver=letsencrypt"
+      - "traefik.http.services.recetas-pharmacy.loadbalancer.server.port=80"
+
+volumes:
+  pgdata:
+
+networks:
+  recetas-network:
+    driver: bridge
+  traefik-public:
+    external: true

@@ -1,0 +1,337 @@
+name: Test & Deploy
+
+on:
+  push:
+    branches:
+      - main
+  # PRs targeting main run ONLY the test job. The image build-push jobs and the
+  # droplet deploy job are gated to push events via job-level `if:` conditions
+  # below, so they never run on a PR.
+  pull_request:
+    branches:
+      - main
+
+# Serialize production deploys so overlapping pushes to main don't interleave.
+# cancel-in-progress: false lets an in-flight deploy finish before the next runs.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Test
+        run: pnpm -r test
+
+  check-vite-vars:
+    name: Check VITE_* Repository Variables
+    runs-on: ubuntu-latest
+    # Deliberately no `needs:` — this costs seconds and needs no checkout, so it
+    # runs beside the test job and reports a misconfiguration immediately.
+    # Same push-only gate as the build jobs: on a PR the workflow stops at test.
+    if: github.event_name == 'push'
+    # Reads nothing but `vars.*`, which the runner interpolates before the step
+    # starts: no checkout, no API call, so no token scope at all.
+    permissions: {}
+
+    steps:
+      # Vite inlines these four into the doctor and pharmacy bundles at image
+      # build time. None of them has a default, so an undefined or blank one
+      # produces a green build, a green deploy, and two SPAs that render
+      # ConfigurationScreen in production. This job turns that silent failure
+      # into a loud one, before either image is built.
+      #
+      # `vars.X` for a variable that does not exist interpolates to the empty
+      # string — Actions has no "undefined" in an expression context — so a
+      # single emptiness check covers both "never created" and "created blank".
+      #
+      # The values are passed through `env:` rather than interpolated into the
+      # script: a repository variable is attacker-influenced input if a writer
+      # account is compromised, and `${{ }}` inside `run:` is substituted as
+      # shell source before bash sees it.
+      - name: Require every VITE_* repository variable
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_RPC_URL: ${{ vars.VITE_RPC_URL }}
+          VITE_CHAIN_ID: ${{ vars.VITE_CHAIN_ID }}
+          VITE_PRESCRIPTION_REGISTRY_ADDRESS: ${{ vars.VITE_PRESCRIPTION_REGISTRY_ADDRESS }}
+        run: |
+          set -euo pipefail
+
+          # env.ts trims before it decides, so this trims too: a value must fail
+          # here for the same reasons it fails there, and pass for the same
+          # reasons it passes. Whitespace-only therefore counts as missing.
+          trim() {
+            local value="$1"
+            value="${value#"${value%%[![:space:]]*}"}"
+            printf '%s' "${value%"${value##*[![:space:]]}"}"
+          }
+
+          problems=()
+
+          for name in VITE_API_URL VITE_RPC_URL VITE_CHAIN_ID VITE_PRESCRIPTION_REGISTRY_ADDRESS; do
+            printf -v "$name" '%s' "$(trim "${!name-}")"
+            if [ -z "${!name}" ]; then
+              problems+=("$name is not set. Define it under Settings > Secrets and variables > Actions > Variables.")
+            fi
+          done
+
+          # Format checks mirror the app-side rules in
+          # apps/pharmacy/src/infrastructure/config/env.ts (chainIdSchema is
+          # `z.coerce.number().int().positive()`, addressSchema is the regex
+          # below, which apps/cli/src/config.ts repeats). A misspelled value
+          # fails exactly as silently as a missing one. Only these two are
+          # checked for shape: the other two are URLs with no fixed form here.
+          if [ -n "$VITE_CHAIN_ID" ] && ! printf '%s' "$VITE_CHAIN_ID" | grep -Eq '^[1-9][0-9]*$'; then
+            problems+=("VITE_CHAIN_ID must be a positive integer, for example 84532 on Base Sepolia. Current value: '${VITE_CHAIN_ID}'.")
+          fi
+
+          if [ -n "$VITE_PRESCRIPTION_REGISTRY_ADDRESS" ] && ! printf '%s' "$VITE_PRESCRIPTION_REGISTRY_ADDRESS" | grep -Eq '^0x[0-9a-fA-F]{40}$'; then
+            problems+=("VITE_PRESCRIPTION_REGISTRY_ADDRESS must be a 20-byte address matching ^0x[0-9a-fA-F]{40}\$. Current value: '${VITE_PRESCRIPTION_REGISTRY_ADDRESS}'.")
+          fi
+
+          if [ ${#problems[@]} -gt 0 ]; then
+            for problem in "${problems[@]}"; do
+              echo "::error::${problem}"
+            done
+            echo "Refusing to build the doctor and pharmacy images: ${#problems[@]} build-time variable(s) would be baked in wrong."
+            exit 1
+          fi
+
+          echo "All four VITE_* repository variables are present and well-formed."
+
+  build-api:
+    name: Build & Push API Image
+    runs-on: ubuntu-latest
+    needs: [test]
+    # Only build/push images on push to main — PRs stop at the test job above.
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # REQUIRED before build-push-action's `cache-from`/`cache-to: type=gha` —
+      # the GHA cache backend needs Buildx's driver, not the classic builder.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.api.prod
+          push: true
+          tags: |
+            ghcr.io/rafaseros/recetas-api:latest
+            ghcr.io/rafaseros/recetas-api:sha-${{ github.sha }}
+          cache-from: type=gha,scope=recetas-api
+          cache-to: type=gha,mode=max,scope=recetas-api
+
+  build-doctor:
+    name: Build & Push Doctor Image
+    runs-on: ubuntu-latest
+    # check-vite-vars gates only the two image builds that bake VITE_* values
+    # in; build-api reads none of them and is left on `needs: [test]`.
+    needs: [test, check-vite-vars]
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push doctor image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.doctor.prod
+          push: true
+          # Vite bakes these into the built JS at image-build time (see
+          # docker/Dockerfile.doctor.prod) — unlike sigdoc's frontend, which
+          # needs no build-time configuration at all. `vars.*` are GitHub
+          # repository Variables (non-secret config); swap in `secrets.*` for
+          # any value that shouldn't be readable in workflow logs/UI.
+          build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_RPC_URL=${{ vars.VITE_RPC_URL }}
+            VITE_CHAIN_ID=${{ vars.VITE_CHAIN_ID }}
+            VITE_PRESCRIPTION_REGISTRY_ADDRESS=${{ vars.VITE_PRESCRIPTION_REGISTRY_ADDRESS }}
+          tags: |
+            ghcr.io/rafaseros/recetas-doctor:latest
+            ghcr.io/rafaseros/recetas-doctor:sha-${{ github.sha }}
+          cache-from: type=gha,scope=recetas-doctor
+          cache-to: type=gha,mode=max,scope=recetas-doctor
+
+  build-pharmacy:
+    name: Build & Push Pharmacy Image
+    runs-on: ubuntu-latest
+    needs: [test, check-vite-vars]
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push pharmacy image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.pharmacy.prod
+          push: true
+          # Same build-time configuration as the doctor image above.
+          build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_RPC_URL=${{ vars.VITE_RPC_URL }}
+            VITE_CHAIN_ID=${{ vars.VITE_CHAIN_ID }}
+            VITE_PRESCRIPTION_REGISTRY_ADDRESS=${{ vars.VITE_PRESCRIPTION_REGISTRY_ADDRESS }}
+          tags: |
+            ghcr.io/rafaseros/recetas-pharmacy:latest
+            ghcr.io/rafaseros/recetas-pharmacy:sha-${{ github.sha }}
+          cache-from: type=gha,scope=recetas-pharmacy
+          cache-to: type=gha,mode=max,scope=recetas-pharmacy
+
+  deploy:
+    name: Deploy to Droplet
+    runs-on: ubuntu-latest
+    needs: [build-api, build-doctor, build-pharmacy]
+    # Deploy only on push to main, and only if all three image builds succeeded.
+    # On PRs the build jobs are skipped, so this job is skipped too.
+    if: success() && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Deploy to droplet
+        uses: appleboy/ssh-action@v1
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: GHCR_TOKEN
+          script: |
+            set -e
+
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            cd /opt/docker/apps/recetas
+
+            # Deploy the immutable, per-commit build (sha-<gitsha>) instead of
+            # the mutable :latest tag, so this deploy is reproducible and can be
+            # rolled back to any prior commit (see docs/19-despliegue.md).
+            # docker-compose.prod.yml resolves the running tag from
+            # ${RECETAS_IMAGE_TAG:-latest}; the build jobs above push
+            # ghcr.io/rafaseros/recetas-{api,doctor,pharmacy}:sha-<gitsha>.
+            export RECETAS_IMAGE_TAG="sha-${{ github.sha }}"
+
+            # Pull latest compose files and config (images themselves come from GHCR)
+            git pull origin main
+
+            # Pull pre-built images — the droplet never builds, it only pulls
+            docker compose -f docker-compose.prod.yml pull api doctor pharmacy
+
+            # Run the drizzle migration BEFORE recreating the api, in a one-off
+            # container built from the freshly pulled image (`run --rm` uses a
+            # throwaway container and never touches the running recetas-api).
+            # `set -e` makes a failed migration abort the deploy right here, so
+            # the old api keeps serving the old schema instead of running new
+            # code against a half-migrated database.
+            #
+            # `db:migrate`, not `db:push`. `push` diffs the schema file against
+            # the live database and applies the difference directly: it is a
+            # development convenience, it can drop a column to reach the target
+            # shape, and with `strict: true` in drizzle.config.ts it asks for
+            # confirmation — which nothing can answer over SSH. `migrate`
+            # applies the versioned files in services/api/drizzle/ and records
+            # what it applied, so a deploy is deterministic and repeatable.
+            docker compose -f docker-compose.prod.yml run --rm api pnpm --filter @recetas/api db:migrate
+
+            # Migration succeeded — recreate containers with the freshly pulled images
+            docker compose -f docker-compose.prod.yml up -d
+
+            # Post-deploy smoke test — poll until the freshly-recreated api is
+            # listening. A single early request can race the process starting up
+            # (connection refused before the container is ready) even though it
+            # becomes healthy seconds later (healthcheck start_period is 15s).
+            # wget exits non-zero on any non-2xx response (so a 503 from
+            # GET /health, or a refused connection, both count as "not ready"
+            # here); a command's exit code inside an `if` never trips `set -e`,
+            # so this loop is safe to run under it.
+            API_OK=0
+            for i in $(seq 1 30); do
+              if docker compose -f docker-compose.prod.yml exec -T api wget -q -O /dev/null http://127.0.0.1:3000/health; then
+                API_OK=1
+                echo "API healthy after ${i} attempt(s)"
+                break
+              fi
+              sleep 2
+            done
+            if [ "$API_OK" != "1" ]; then
+              echo "API health check failed after 30 attempts"
+              exit 1
+            fi
+
+            # Clean up old images
+            docker image prune -f
+
+            docker logout ghcr.io
+
+            echo "recetas deployed successfully (API healthy)"

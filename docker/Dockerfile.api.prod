@@ -1,0 +1,69 @@
+# ---------------------------------------------------------------------------
+# Production image for the Fastify API.
+#
+# This app ships with NO compile step: services/api/package.json's "start"
+# script is `tsx src/server.ts` (its "build" script is only `tsc --noEmit`, a
+# type-check, not a compile — see tsconfig.base.json's comment on this). The
+# TypeScript source therefore runs directly through tsx in production exactly
+# as it does in development, so the runtime stage below ships source +
+# node_modules, not a dist/ folder.
+#
+# Build context is the repository root (see docker-compose.prod.yml and
+# .github/workflows/deploy.yml).
+# ---------------------------------------------------------------------------
+
+# --- Build stage: resolve the workspace exactly as the lockfile pins it -----
+FROM node:22-alpine AS build
+
+RUN corepack enable
+
+WORKDIR /app
+
+# Manifests first so this layer is cached independently of source edits (same
+# ordering as the dev image, services/api/Dockerfile). The api depends on all
+# three workspace packages (services/api/package.json).
+COPY package.json pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/crypto/package.json ./packages/crypto/
+COPY packages/rules/package.json ./packages/rules/
+COPY services/api/package.json ./services/api/
+
+# --frozen-lockfile: a production build must fail, not silently rewrite
+# pnpm-lock.yaml, if the manifests and the lockfile have drifted apart.
+RUN pnpm install --frozen-lockfile
+
+COPY packages ./packages
+COPY services/api ./services/api
+
+# --- Runtime stage ------------------------------------------------------------
+FROM node:22-alpine AS runtime
+
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+# Install the exact pnpm version pinned by "packageManager" in package.json via
+# npm (bundled with node:22-alpine) instead of `corepack enable`: corepack's
+# shim resolves and downloads the pinned pnpm build from the npm registry on
+# ITS FIRST INVOCATION — which would happen here at CONTAINER START (the CMD
+# below), not at image build time. That is an avoidable network dependency and
+# startup delay for a workspace whose dependencies are already fully resolved.
+# Installing the pinned version at build time keeps the image self-contained
+# and the container start deterministic.
+RUN npm install -g pnpm@9.12.3
+
+# Copy the fully resolved workspace (node_modules, workspace packages, api
+# source) from the build stage — there is no separate build artifact to pick.
+COPY --from=build /app ./
+
+# Non-root runtime user, uid 10001 — same convention as sigdoc's api image
+# (docker/Dockerfile.api.prod there). The process only reads its own files and
+# binds :3000 (>1024, so no privilege is needed).
+RUN addgroup -g 10001 appuser \
+  && adduser -D -H -u 10001 -G appuser appuser \
+  && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 3000
+
+CMD ["pnpm", "--filter", "@recetas/api", "start"]
