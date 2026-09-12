@@ -1,0 +1,185 @@
+# ---------------------------------------------------------------------------
+# Local development environment.
+#
+# Two modes, on purpose:
+#
+#   docker compose up -d              -> infrastructure only (postgres, anvil)
+#   docker compose --profile apps up  -> everything, applications included
+#
+# The default is infrastructure only because on Windows bind mounts reach the
+# container through WSL2, where file watching is slow and drops events. Vite HMR
+# and `tsx watch` inside a container observing a Windows-mounted folder is the
+# textbook pathological case. Postgres and Anvil do not watch project files, so
+# they have no such problem and stay containerised.
+#
+# In the normal workflow the API and both SPAs run on the host with pnpm and
+# talk to localhost:5432 and localhost:8545. See README.md.
+# ---------------------------------------------------------------------------
+name: proyecto-recetas
+
+services:
+  # --- Infrastructure: always up --------------------------------------------
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: recetas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-recetas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-recetas}
+      POSTGRES_DB: ${POSTGRES_DB:-recetas}
+      # Deterministic collation so index behaviour matches across machines.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-recetas} -d ${POSTGRES_DB:-recetas}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    container_name: recetas-anvil
+    restart: unless-stopped
+    # The image entrypoint is `sh -c`, which takes only its FIRST argument as the
+    # script: every flag after it becomes $0, $1... and is silently dropped. That
+    # left anvil on its default 127.0.0.1, unreachable from the host and from
+    # sibling containers, while the container still reported healthy. Bypass the
+    # shell entirely and pass argv directly.
+    entrypoint: ["anvil"]
+    command:
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8545"
+      - "--chain-id"
+      - "${ANVIL_CHAIN_ID:-31337}"
+      - "--block-time"
+      - "${ANVIL_BLOCK_TIME:-2}"
+    ports:
+      - "${ANVIL_PORT:-8545}:8545"
+    healthcheck:
+      # Probe the service name, not 127.0.0.1: loopback stays reachable even when
+      # anvil binds only to loopback, so a localhost probe reports healthy on a
+      # container nobody else can reach. This one fails when the bind is wrong.
+      test: ["CMD-SHELL", "cast block-number --rpc-url http://anvil:8545 > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # --- Applications: profile `apps` -----------------------------------------
+  # Only for a clean run or to reproduce an environment problem. Day to day
+  # these run on the host, where hot reload is native and fast.
+
+  api:
+    profiles: ["apps"]
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    container_name: recetas-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      anvil:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      # Inside the Compose network the hosts are service names, not localhost.
+      DATABASE_URL: postgres://${POSTGRES_USER:-recetas}:${POSTGRES_PASSWORD:-recetas}@postgres:5432/${POSTGRES_DB:-recetas}
+      RPC_URL: http://anvil:8545
+      CHAIN_ID: ${ANVIL_CHAIN_ID:-31337}
+      API_HOST: 0.0.0.0
+      API_PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost:5174}
+      PRESCRIPTION_REGISTRY_ADDRESS: ${PRESCRIPTION_REGISTRY_ADDRESS:-}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    volumes:
+      - ./services/api:/app/services/api
+      - ./packages:/app/packages
+      # Anonymous volumes keep container-installed dependencies from being
+      # shadowed by the host bind mounts.
+      - /app/node_modules
+      - /app/services/api/node_modules
+      - /app/packages/shared/node_modules
+      - /app/packages/crypto/node_modules
+      - /app/packages/rules/node_modules
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/health > /dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  doctor:
+    profiles: ["apps"]
+    build:
+      context: .
+      dockerfile: apps/doctor/Dockerfile
+    container_name: recetas-doctor
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      DOCTOR_PORT: 5173
+      # Polling is the only reliable watch mode over a WSL2 bind mount.
+      VITE_USE_POLLING: "true"
+      # The browser always talks to published ports on the host.
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+      VITE_RPC_URL: ${VITE_RPC_URL:-http://localhost:8545}
+      VITE_CHAIN_ID: ${VITE_CHAIN_ID:-31337}
+      VITE_PRESCRIPTION_REGISTRY_ADDRESS: ${VITE_PRESCRIPTION_REGISTRY_ADDRESS:-}
+    ports:
+      - "${DOCTOR_PORT:-5173}:5173"
+    volumes:
+      - ./apps/doctor:/app/apps/doctor
+      - ./packages:/app/packages
+      - ./design:/app/design
+      - /app/node_modules
+      - /app/apps/doctor/node_modules
+      - /app/packages/shared/node_modules
+      - /app/packages/crypto/node_modules
+      - /app/packages/rules/node_modules
+
+  pharmacy:
+    profiles: ["apps"]
+    build:
+      context: .
+      dockerfile: apps/pharmacy/Dockerfile
+    container_name: recetas-pharmacy
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      PHARMACY_PORT: 5174
+      VITE_USE_POLLING: "true"
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+      VITE_RPC_URL: ${VITE_RPC_URL:-http://localhost:8545}
+      VITE_CHAIN_ID: ${VITE_CHAIN_ID:-31337}
+      VITE_PRESCRIPTION_REGISTRY_ADDRESS: ${VITE_PRESCRIPTION_REGISTRY_ADDRESS:-}
+    ports:
+      - "${PHARMACY_PORT:-5174}:5174"
+    volumes:
+      - ./apps/pharmacy:/app/apps/pharmacy
+      - ./packages:/app/packages
+      - ./design:/app/design
+      - /app/node_modules
+      - /app/apps/pharmacy/node_modules
+      - /app/packages/shared/node_modules
+      - /app/packages/crypto/node_modules
+
+volumes:
+  postgres-data:
+    name: recetas-postgres-data

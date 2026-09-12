@@ -6,3 +6,163 @@ A verifiable e-prescription system built on an Ethereum L2 (Base Sepolia). Docto
 Built for an Ethereum buildathon in Cochabamba, Bolivia.
 
 **Architecture documentation: [docs/README.md](docs/README.md)**
+
+---
+
+## Quick start
+
+### Requirements
+
+| Tool | Version | Notes |
+|---|---|---|
+| Node | 22 or newer | `.nvmrc` pins the major |
+| pnpm | 9.12.3 | `corepack enable` installs the pinned version |
+| Docker Desktop | current | WSL2 backend on Windows |
+| Foundry | current | `forge`, `cast`, `anvil` — only needed for the contracts |
+
+```bash
+cp env.example .env
+pnpm install
+```
+
+### Two run modes, and why
+
+Both exist for one technical reason: on Windows, bind mounts reach a container through WSL2, where file watching is slow and drops events — Vite HMR and `tsx watch` inside a container observing a Windows-mounted folder is the textbook pathological case. Postgres and Anvil watch no project files, so they stay containerised in both modes.
+
+**Normal mode (recommended)** — infrastructure in Docker, applications on the host, where hot reload is native:
+
+```bash
+docker compose up -d    # postgres + anvil only
+pnpm db:push            # create the schema
+pnpm dev                # api + doctor + pharmacy on the host
+```
+
+**Full-container mode** — for a clean run or to reproduce an environment problem:
+
+```bash
+docker compose --profile apps up
+```
+
+### Ports
+
+| Service | Port | Mode |
+|---|---|---|
+| Postgres | 5432 | both |
+| Anvil (local chain) | 8545 | both |
+| API (Fastify) | 3000 | host, or `apps` profile |
+| Doctor SPA | 5173 | host, or `apps` profile |
+| Pharmacy PWA | 5174 | host, or `apps` profile |
+
+Health check: `curl http://localhost:3000/health`.
+
+### Contracts
+
+`forge-std` is not vendored, so install it once:
+
+```bash
+cd contracts
+forge install foundry-rs/forge-std --no-git
+forge build
+forge test -vvv
+```
+
+The test that backs the pitch is `test_dispense_twice_reverts`. If it fails, there is no project.
+
+```bash
+forge test --match-test test_dispense_twice_reverts -vvv
+```
+
+Deploy to the local chain, with Anvil already running from Compose:
+
+```bash
+cd contracts
+forge script script/Deploy.s.sol --rpc-url anvil --broadcast
+forge script script/SetupCredentials.s.sol --rpc-url anvil --broadcast
+```
+
+`Deploy.s.sol` brings up a `MockEAS` on chainId 31337, because Anvil has no
+Ethereum Attestation Service of its own. Off that chain it refuses to run
+without `EAS_ADDRESS`, `PRACTITIONER_SCHEMA_UID`, `PHARMACY_SCHEMA_UID` and
+`ISSUER_AUTHORITY`: a registry deployed with those at zero can never accredit
+anyone.
+
+`SetupCredentials.s.sol` then accredits the three demo accounts — the authority
+attests in EAS, and each account registers the pointer itself. Nobody issues or
+dispenses without a live credential.
+
+### Workspace scripts
+
+| Command | What it does |
+|---|---|
+| `pnpm dev` | API and both SPAs in watch mode |
+| `pnpm build` | Type-check and build every package |
+| `pnpm test` | Vitest across the workspace |
+| `pnpm typecheck` | `tsc --noEmit` everywhere |
+| `pnpm db:push` | Apply the Drizzle schema to Postgres |
+
+### Demo CLI
+
+The buildathon deliverable runs without either SPA. With Postgres, Anvil and the
+API up:
+
+```bash
+corepack pnpm --filter '@recetas/cli' exec tsx src/main.ts demo
+```
+
+Issue, dispense, and a second dispensing rejected with the decoded
+`AlreadyDispensed` error — who dispensed it and when. Act zero accredits the
+three accounts against EAS, so the command also works on a chain where
+`SetupCredentials.s.sol` has not been run; `receta setup-credentials` does that
+step alone.
+
+```bash
+corepack pnpm --filter '@recetas/cli' exec tsx src/main.ts demo --revoked
+```
+
+The other rejection worth showing: the authority withdraws the pharmacy's
+credential in EAS, and the next dispensing dies with `NotAccreditedPharmacy`.
+The registry re-reads EAS on every call, so the revocation bites immediately and
+no administrator is involved. See [apps/cli/README.md](apps/cli/README.md).
+
+---
+
+## Repository layout
+
+```
+contracts/          Foundry project: PrescriptionRegistry + tests
+apps/cli/           `receta`: end-to-end demo CLI (issue, verify, dispense)
+apps/doctor/        React 19 SPA, desktop
+apps/pharmacy/      React 19 PWA, mobile, camera + QR
+services/api/       Fastify BFF over Postgres (encrypted payload store)
+packages/shared/    Domain types, zod schemas, EIP-712 domain
+packages/crypto/    AES-256-GCM envelope encryption over WebCrypto
+packages/rules/     Deterministic clinical rules engine
+design/             Design tokens, component layer, static mockups
+docs/               Architecture documentation
+```
+
+## Rules the code may not break
+
+These come from the architecture documents and a review that finds one violated should block the merge.
+
+| Rule | Source |
+|---|---|
+| No patient identifier on-chain: not the id, not its hash, not a stable pseudonym. Only `keccak256(patientId, salt)` with a different salt per prescription | [docs/03](docs/03-modelo-de-datos.md) |
+| The salt never appears on-chain, in the QR, in a URL or in a log line | [docs/03](docs/03-modelo-de-datos.md), [docs/17](docs/17-diseno-y-experiencia.md) |
+| No reopen function over a dispensed prescription — not administrative, not emergency, not multisig | [docs/04](docs/04-smart-contracts.md) |
+| The pharmacy service worker caches the app shell only, never clinical content and never verification responses | [docs/17](docs/17-diseno-y-experiencia.md) |
+| No clinical alert blocks issuance; the engine only returns alerts with their evidence | [docs/06](docs/06-validacion-clinica.md) |
+| The words "wallet", "seed phrase" and "balance" never appear in the interface | [docs/01](docs/01-arquitectura.md), [docs/17](docs/17-diseno-y-experiencia.md) |
+| Real patient data only in the pilot environment, with documented consent | [docs/08](docs/08-stack-y-entorno.md) |
+
+## What is deliberately not built yet
+
+| Gap | Decision |
+|---|---|
+| EAS credential checks: `_isAccreditedPractitioner` and `_isAccreditedPharmacy` accept everyone | docs/04 — acceptable on Anvil, must never reach Base Sepolia |
+| ERC-4337 account abstraction; `permissionless.js` is not installed | docs/01, docs/08 |
+| DEK wrapping per recipient; the key travels unwrapped in the QR | D-24, [docs/05](docs/05-almacenamiento-y-cifrado.md) |
+| Drug-drug interactions; the MVP covers declared allergies and ATC duplication only | D-15, [docs/06](docs/06-validacion-clinica.md) |
+| Medication catalogue; prescribing is by active ingredient and ATC code | D-07, [docs/03](docs/03-modelo-de-datos.md) |
+| Chronic treatment and partial dispensing | D-12, [docs/04](docs/04-smart-contracts.md) |
+| ADSIB legal signature; shown as `pending-integration`, never simulated as valid | D-17, [docs/07](docs/07-seguridad-y-cumplimiento.md) |
