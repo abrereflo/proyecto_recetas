@@ -5,8 +5,8 @@
  * (docs/17-diseno-y-experiencia.md, screen D5).
  */
 
-/** Base Sepolia. */
-export const BASE_SEPOLIA_CHAIN_ID = 84532 as const;
+/** Avalanche Fuji. */
+export const FUJI_CHAIN_ID = 43113 as const;
 
 export const EIP712_DOMAIN_NAME = 'RecetaVerificable' as const;
 export const EIP712_DOMAIN_VERSION = '1' as const;
@@ -27,13 +27,13 @@ export interface Eip712Domain {
 export const PRESCRIPTION_EIP712_DOMAIN = {
   name: EIP712_DOMAIN_NAME,
   version: EIP712_DOMAIN_VERSION,
-  chainId: BASE_SEPOLIA_CHAIN_ID,
+  chainId: FUJI_CHAIN_ID,
 } as const satisfies Eip712Domain;
 
 /** Build the domain for a concrete deployment. */
 export function prescriptionDomain(
   verifyingContract: string,
-  chainId: number = BASE_SEPOLIA_CHAIN_ID,
+  chainId: number = FUJI_CHAIN_ID,
 ): Eip712Domain {
   return {
     name: EIP712_DOMAIN_NAME,

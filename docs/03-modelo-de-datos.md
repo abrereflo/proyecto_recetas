@@ -131,7 +131,7 @@ El QR es el único artefacto que el paciente maneja. Debe ser autosuficiente par
 ```json
 {
   "v": 1,
-  "chainId": 84532,
+  "chainId": 43113,
   "registry": "<PrescriptionRegistry address>",
   "contentHash": "0x…",
   "pointer": "<opaque off-chain pointer>",

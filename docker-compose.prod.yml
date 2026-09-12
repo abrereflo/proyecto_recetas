@@ -8,7 +8,7 @@
 # and labels each public-facing service, exactly as sigdoc's
 # docker-compose.prod.yml does. See docs/19-despliegue.md.
 #
-# No Anvil here: production points at Base Sepolia (chainId 84532). Anvil is
+# No Anvil here: production points at Avalanche Fuji (chainId 43113). Anvil is
 # the local development chain only (see docker-compose.yml).
 #
 # Two public hostnames instead of sigdoc's one: the pharmacy app is a PWA with

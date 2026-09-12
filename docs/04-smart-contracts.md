@@ -223,12 +223,12 @@ El contrato usa `block.timestamp` para evaluar la caducidad. Conviene saber qué
 | Propiedad | Realidad |
 |---|---|
 | Precisión | Segundos, pero no es un reloj exacto: lo fija el proponente del bloque |
-| Manipulabilidad | En L1 un validador puede desviarlo dentro de un margen acotado. En un L2 con secuenciador centralizado, el secuenciador determina el valor |
+| Manipulabilidad | Lo fija el validador que propone el bloque y puede desviarlo dentro de un margen acotado. La C-Chain de Avalanche no tiene secuenciador: no hay un único actor que determine el valor, pero tampoco hay una L1 externa que lo arbitre. `VERIFICAR:` la tolerancia exacta de desviación temporal que aceptan los validadores de la C-Chain |
 | Monotonía | Creciente entre bloques |
 | Riesgo para nosotros | Bajo: una receta con caducidad de treinta días no se ve afectada por una desviación de segundos |
 
 > **Decisión pendiente — D-13**
-> **Contexto.** Depender del reloj del secuenciador de un L2 para una caducidad con efectos legales merece una decisión explícita, no un descuido.
+> **Contexto.** Depender del reloj que fija el validador proponente de la C-Chain para una caducidad con efectos legales merece una decisión explícita, no un descuido.
 > **Opciones.** (a) `block.timestamp` con granularidad de días, de modo que cualquier desviación plausible sea irrelevante. (b) Número de bloque como referencia temporal, que es peor porque el tiempo por bloque varía. (c) Oráculo de tiempo, complejidad injustificada. (d) Caducidad evaluada off-chain y solo registrada on-chain.
 > **Recomendación.** Opción (a): `expiresAt` se fija a medianoche del día de caducidad y se documenta que la precisión efectiva es de un día. Es suficiente para el dominio y elimina la discusión.
 > **Impacto si se difiere.** Ninguno funcional, pero deja un supuesto implícito en un punto con efectos jurídicos.

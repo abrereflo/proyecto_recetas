@@ -59,7 +59,7 @@ El informe base se apoya en investigación del Laboratorio LIRE (Universidad de 
 
 | Componente | Entregable demostrable |
 |---|---|
-| Contrato `PrescriptionRegistry` en Base Sepolia | `issue(bytes32 contentHash, bytes32 patientCommitment, uint64 expiresAt)` y `dispense(bytes32 contentHash)` de un solo uso |
+| Contrato `PrescriptionRegistry` en Avalanche Fuji | `issue(bytes32 contentHash, bytes32 patientCommitment, uint64 expiresAt)` y `dispense(bytes32 contentHash)` de un solo uso |
 | Credenciales profesionales | Attestations EAS para médicos y farmacias, con revocación |
 | Aplicación del médico | Smart account ERC-4337, paymaster que patrocina el gas, firma EIP-712, generación de QR |
 | Aplicación de la farmacia | Escaneo de QR, verificación on-chain, envío de la transacción de dispensación |
@@ -74,7 +74,7 @@ sequenceDiagram
     participant M as Médico
     participant P as Paciente
     participant F as Farmacia
-    participant SC as PrescriptionRegistry (Base Sepolia)
+    participant SC as PrescriptionRegistry (Avalanche Fuji)
 
     M->>M: Firma la receta con passkey (EIP-712)
     M->>P: Entrega el QR
@@ -99,7 +99,7 @@ sequenceDiagram
 | Wallet para el paciente | Añade fricción y no es necesaria para el flujo | [Fase 2](09-roadmap.md) |
 | OCR de recetas en papel | Es contradictorio aplicar visión por computador a recetas que el propio sistema emite en digital | Solo migración de histórico, [Fase 3](09-roadmap.md) |
 | Historia clínica completa | El alcance es la receta | Sin fecha |
-| Blockchain de consorcio privada | Decisión revertida: corremos sobre L2 público. Ver [01](01-arquitectura.md) | Solo como camino de producción a futuro |
+| Blockchain de consorcio privada | Decisión revertida: corremos sobre una cadena pública sin permisos. Ver [01](01-arquitectura.md) | Solo como camino de producción a futuro |
 
 ## Corrección importante heredada de la fuente
 
@@ -112,9 +112,9 @@ Metas de diseño propuestas por este documento, no resultados medidos.
 
 | Objetivo | Métrica | Meta |
 |---|---|---|
-| Verificación en mostrador | Tiempo desde escaneo hasta veredicto | `SUPUESTO:` por debajo de 5 s en Base Sepolia; se mide durante el desarrollo |
+| Verificación en mostrador | Tiempo desde escaneo hasta veredicto | `SUPUESTO:` por debajo de 5 s en Avalanche Fuji; se mide durante el desarrollo |
 | Antirreutilización | Dispensaciones que exceden lo autorizado | 0, garantizado por el contrato |
-| Fricción para el médico | ETH que necesita comprar; extensiones que debe instalar | Cero y cero |
+| Fricción para el médico | AVAX que necesita comprar; extensiones que debe instalar | Cero y cero |
 | Privacidad | Identificadores de paciente visibles on-chain | Ninguno, en ninguna forma |
 | Coste por receta | Gas pagado por el médico | Cero: lo cubre el paymaster |
 
@@ -135,7 +135,7 @@ Metas de diseño propuestas por este documento, no resultados medidos.
 | `SUPUESTO:` | La farmacia del piloto tiene un dispositivo con cámara y conexión a internet |
 | `SUPUESTO:` | El piloto usa medicamentos no controlados |
 | Restricción | Ningún identificador de paciente va on-chain, ni en claro ni como seudónimo estable |
-| Restricción | El médico nunca adquiere ETH ni firma una transacción cruda |
+| Restricción | El médico nunca adquiere AVAX ni firma una transacción cruda |
 | Restricción | Lo que llamamos validación clínica es un motor de reglas determinístico, no IA. Ver [06](06-validacion-clinica.md) |
 | Restricción | Sin evidencia publicada, ninguna cifra se presenta como propia |
 

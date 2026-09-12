@@ -52,7 +52,7 @@ flowchart TB
     Doc --> DEK
     DEK --> Cipher
     Cipher --> Hash
-    Hash --> Chain["issue(contentHash, patientCommitment, expiresAt)<br/>Base Sepolia"]
+    Hash --> Chain["issue(contentHash, patientCommitment, expiresAt)<br/>Avalanche Fuji"]
     Cipher --> Store["Almacén off-chain<br/>ver D-08"]
 
     DEK --> W1["MVP: la DEK viaja en el QR<br/>sin envoltura"]

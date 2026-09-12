@@ -75,7 +75,7 @@ const RULES = {
   },
   chainId: {
     variable: 'VITE_CHAIN_ID',
-    hint: 'Debe ser el identificador numérico de la cadena, por ejemplo 84532 en Base Sepolia.',
+    hint: 'Debe ser el identificador numérico de la cadena, por ejemplo 43113 en Avalanche Fuji.',
     schema: chainIdSchema,
   },
   registryAddress: {

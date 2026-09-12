@@ -6,7 +6,7 @@ import type { CliConfig } from './config';
 /**
  * Chain plumbing.
  *
- * The chain is built from configuration instead of importing `baseSepolia`, so
+ * The chain is built from configuration instead of importing `avalancheFuji`, so
  * the same CLI drives Anvil today and the public testnet once phase 2 finishes,
  * with no code change.
  *

@@ -13,7 +13,7 @@ Las cuatro primeras columnas reproducen la tabla del informe base sin alterarla.
 | MediLedger | Consorcio | Blockchain | Trazabilidad de suministro | Es un problema distinto al nuestro: rastrear unidades físicas exige serialización, no clasificación. Ver [03](03-modelo-de-datos.md) |
 | VigilRx | Ethereum público | Centralizado | Control de opioides | Cadena pública con almacenamiento centralizado: el mismo modelo híbrido que adoptamos. El riesgo es que el componente central vuelva a ser el punto de fallo |
 | SecureRx | Ethereum | Descentralizado | Legitimidad farmacológica | Demuestra que el anclaje en Ethereum de la legitimidad de una receta es viable. No resolvió la identidad legal del prescriptor |
-| **Propuesta actual** | **Ethereum L2 público (Base)** | **Cifrado off-chain, hash on-chain** | **Unicidad de dispensación y credenciales verificables** | **Ver la sección siguiente** |
+| **Propuesta actual** | **L1 EVM pública (C-Chain de Avalanche)** | **Cifrado off-chain, hash on-chain** | **Unicidad de dispensación y credenciales verificables** | **Ver la sección siguiente** |
 
 > **La columna "Interoperabilidad" del informe base fue eliminada.**
 > En la tabla original, nuestra propuesta se autoasignaba "Máxima" sin criterio. Calificarse a uno mismo por encima de todos los demás en una dimensión sin definir no es análisis, es publicidad. Si se quisiera reintroducir la columna, tendría que puntuarse con criterios verificables: adopción de HL7 FHIR R4, uso de codificación estándar, existencia de una API pública documentada y despliegues en producción. Bajo esos criterios, nuestra propuesta hoy tendría la puntuación más baja de la tabla, porque no está desplegada.
@@ -27,7 +27,7 @@ Las cuatro primeras columnas reproducen la tabla del informe base sin alterarla.
 | Referencia | Cómo aparece en la fuente | Nuestro tratamiento |
 |---|---|---|
 | Laboratorio LIRE, Universidad de Constantine 2 (Argelia) | Identifica como desafío crítico la dificultad de generar un registro EMR unificado a partir de bases de datos hospitalarias dispersas | Se cita tal como aparece. Es investigación argelina; su aplicabilidad al contexto boliviano está por establecer |
-| Protocolo SPChain | Referencia del modelo de blockchain de consorcio del informe base | Se menciona por trazabilidad histórica. Nosotros **no** adoptamos el modelo de consorcio: corremos sobre un L2 público. Ver [01](01-arquitectura.md) |
+| Protocolo SPChain | Referencia del modelo de blockchain de consorcio del informe base | Se menciona por trazabilidad histórica. Nosotros **no** adoptamos el modelo de consorcio: corremos sobre una cadena pública sin permisos, la C-Chain de Avalanche, que es una L1 EVM independiente. Ver [01](01-arquitectura.md) |
 
 ### Referencias del informe base retiradas
 
@@ -68,7 +68,7 @@ Esta sección existe para que la escriba el equipo y no el jurado.
 | "Hay demanda para esto en Cochabamba" | No lo hemos validado. Ver [D-23](00-vision-y-alcance.md) |
 | "Escala" | No hemos medido nada. Cero pruebas de carga |
 
-> **Lo que sí podemos demostrar en tres minutos:** que un médico sin ETH y sin wallet firma una receta, que la farmacia la verifica contra Ethereum y que el segundo intento de dispensarla es rechazado por el contrato. Eso es verdad, es verificable en vivo y es más de lo que muchas propuestas pueden mostrar.
+> **Lo que sí podemos demostrar en tres minutos:** que un médico sin AVAX y sin wallet firma una receta, que la farmacia la verifica contra una cadena pública y que el segundo intento de dispensarla es rechazado por el contrato. Eso es verdad, es verificable en vivo y es más de lo que muchas propuestas pueden mostrar.
 
 ## Siguiente paso
 

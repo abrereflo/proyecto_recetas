@@ -2,9 +2,9 @@
 
 La lista operativa del buildathon. El orden no es negociable y sale de [16](16-plan-de-ejecucion.md): cada fase existe para desbloquear la siguiente, y su **criterio de salida** es lo único que autoriza a pasar adelante. Una fase a medias no se deja atrás «para volver luego»; volver luego es exactamente lo que no va a ocurrir en setenta y dos horas.
 
-> **Estado al 12/09/2026.** Fase 1 cerrada: `forge test` da 13 de 13, con `test_dispense_twice_reverts` verificando el revert *con sus argumentos* y un fuzz de 256 pasadas sobre el estado absorbente. Fase 0 cerrada salvo lo que depende de la red de Base Sepolia. El andamiaje adelantó además parte de las fases 4 y 10 (`packages/crypto`, `shared` y `rules`, con 21 pruebas en verde): están marcadas porque existen y pasan, no porque se haya alterado el orden de prioridades.
+> **Estado al 12/09/2026.** Fase 1 cerrada: `forge test` da 13 de 13, con `test_dispense_twice_reverts` verificando el revert *con sus argumentos* y un fuzz de 256 pasadas sobre el estado absorbente. Fase 0 cerrada salvo lo que depende de la red de Avalanche Fuji. El andamiaje adelantó además parte de las fases 4 y 10 (`packages/crypto`, `shared` y `rules`, con 21 pruebas en verde): están marcadas porque existen y pasan, no porque se haya alterado el orden de prioridades.
 >
-> **La acreditación EAS ya no está stubbeada.** `_isAccreditedPractitioner` y `_isAccreditedPharmacy` leen la attestation en EAS en cada llamada y exigen las cinco condiciones de [04](04-smart-contracts.md). `forge test` da 34 de 34: los 13 del ciclo de la receta más 21 de acreditación. Lo que queda de la fase 3 es de red, no de código: registrar los dos esquemas en el `SchemaRegistry` de Base Sepolia y apuntar el despliegue a la instancia canónica de EAS.
+> **La acreditación EAS ya no está stubbeada.** `_isAccreditedPractitioner` y `_isAccreditedPharmacy` leen la attestation en EAS en cada llamada y exigen las cinco condiciones de [04](04-smart-contracts.md). `forge test` da 34 de 34: los 13 del ciclo de la receta más 21 de acreditación. Lo que queda de la fase 3 es de red, no de código, y cambió de forma con la migración: **no existe un despliegue oficial de EAS en Avalanche**, así que hay que desplegar el nuestro en Fuji con `script/DeployEAS.s.sol` y registrar los dos esquemas con `script/RegisterSchemas.s.sol`. Los dos scripts existen y compilan; lo pendiente es ejecutarlos contra Fuji con una cuenta con fondos.
 
 > **La regla que gobierna esta lista.** Si algo no aparece aquí, no se construye. Toda idea nueva se anota en [09](09-roadmap.md) como fase posterior y se sigue con la tarea en curso.
 
@@ -16,11 +16,11 @@ Prerequisito de todo lo demás. **No es progreso hacia la demo**: que Docker lev
 - [x] Workspace pnpm en la raíz con `apps/*`, `services/*`, `packages/*`
 - [x] `tsconfig.base.json` con `strict: true` y rutas a `@recetas/shared`, `@recetas/crypto`, `@recetas/rules`
 - [x] `docker compose up -d` levanta Postgres y Anvil
-- [ ] `.env.example` con `DATABASE_URL`, `RPC_URL`, `BASE_SEPOLIA_RPC`
-- [ ] Obtener ETH de testnet de Base Sepolia en la cuenta de despliegue
-- [ ] Confirmar acceso a un RPC de Base Sepolia con reintentos con backoff
+- [x] `env.example` con `DATABASE_URL`, `RPC_URL`, `FUJI_RPC_URL`
+- [ ] Obtener AVAX de testnet de Fuji en la cuenta de despliegue
+- [ ] Confirmar acceso al RPC público de Fuji (`https://api.avax-test.network/ext/bc/C/rpc`) con reintentos con backoff
 
-> El RPC público `https://sepolia.base.org` dio timeouts intermitentes durante las verificaciones de [16](16-plan-de-ejecucion.md). Todo script de despliegue debe reintentar; un fallo aislado no es evidencia de que algo esté roto.
+> Regla general, no medición: ningún RPC público es fiable al cien por cien, y todo script de despliegue debe reintentar con backoff, porque un fallo aislado no es evidencia de que algo esté roto. La disponibilidad del RPC de Fuji **no se ha medido**; lo que se midió en [16](16-plan-de-ejecucion.md) fue otra red y ese dato no se traslada.
 
 **Criterio de salida:** `docker compose up -d` levanta la infraestructura y `pnpm install` termina sin errores.
 
@@ -30,7 +30,7 @@ Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 
 - [x] `contracts/` inicializado con Foundry
 - [x] `PrescriptionRegistry.sol` con `enum PrescriptionStatus { None, Issued, Dispensed, Cancelled }`
-- [x] Struct EIP-712 `Prescription` y dominio `RecetaVerificable` v1, chainId 84532
+- [x] Struct EIP-712 `Prescription` y dominio `RecetaVerificable` v1, chainId 43113
 - [x] `issue(contentHash, patientCommitment, expiresAt)`
 - [x] `dispense(contentHash)`
 - [x] `cancel(contentHash)` restringido al prescriptor y solo antes de dispensar
@@ -44,7 +44,7 @@ Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 
 **Criterio de salida:** `forge test` en verde, con `test_dispense_twice_reverts` incluida. Si esa prueba falla, no hay proyecto.
 
-## Fase 2 — Despliegue en Base Sepolia
+## Fase 2 — Despliegue en Avalanche Fuji
 
 - [x] `script/Deploy.s.sol` — **validado contra Anvil**: despliega, y el ciclo `issue` → `dispense` → `dispense` revierte con `AlreadyDispensed` devolviendo `dispensedBy` y `dispensedAt` correctos
 - [ ] Desplegar con `--broadcast --verify`
@@ -53,20 +53,28 @@ Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 
 **Criterio de salida:** dirección pública y explorable. Desbloquea todo lo que necesita hablar contra un contrato real.
 
-> El guion de despliegue ya no es un salto al vacío: se ejecutó contra un nodo real (Anvil, chainId 31337) y el ciclo completo de la demo funcionó sobre el contrato desplegado. Lo que falta para Base Sepolia es exclusivamente credenciales y fondos, no código.
+> El guion de despliegue ya no es un salto al vacío: se ejecutó contra un nodo real (Anvil, chainId 31337) y el ciclo completo de la demo funcionó sobre el contrato desplegado. Lo que falta para Fuji es exclusivamente credenciales y fondos, no código.
+
+> **La verificación del código fuente está sin comprobar.** Fuji es de tier pago en Etherscan V2, así que la key gratuita de Etherscan no sirve y `[etherscan]` apunta a Routescan (`https://api.routescan.io/v2/network/testnet/evm/43113/etherscan`, con la key literal `verifyContract`). Esa configuración **no se ha probado todavía contra un despliegue real**: hasta que `--verify` funcione una vez en Fuji, es un supuesto, no un hecho. El explorador de referencia es `https://testnet.snowtrace.io`.
 
 ## Fase 3 — Credenciales EAS
 
 - [x] `IEAS.sol` con el struct `Attestation` transcrito campo a campo de EAS v1.2.0 — un desajuste de orden o de tipo decodifica `revocationTime` desde otra ranura y deja pasar una credencial revocada
 - [x] `registerCredential(bytes32 uid)` — auto-registro sin administrador, con las cinco comprobaciones en el momento de registrar y un error propio por motivo
 - [x] Conectar `_isAccreditedPractitioner` y `_isAccreditedPharmacy` contra EAS, releyendo la attestation en cada `issue` y cada `dispense` y sin cachear nunca el veredicto
-- [x] Registrar el esquema `PractitionerCredential` (`licenseNumber`, `specialtyCode`, `issuerAuthority`, `validFrom`, `validUntil`) — **en el EAS local**; pendiente en el `SchemaRegistry` de Base Sepolia
-- [x] Registrar el esquema `PharmacyCredential` (`pharmacyLicense`, `sanitaryRegistryRef`, `issuerAuthority`, `validFrom`, `validUntil`) — **en el EAS local**; pendiente en el `SchemaRegistry` de Base Sepolia
+- [x] Registrar el esquema `PractitionerCredential` (`licenseNumber`, `specialtyCode`, `issuerAuthority`, `validFrom`, `validUntil`) — **en el EAS local**; pendiente en el `SchemaRegistry` propio de Fuji
+- [x] Registrar el esquema `PharmacyCredential` (`pharmacyLicense`, `sanitaryRegistryRef`, `issuerAuthority`, `validFrom`, `validUntil`) — **en el EAS local**; pendiente en el `SchemaRegistry` propio de Fuji
 - [x] Emitir attestation de prueba para un médico — `script/SetupCredentials.s.sol` y `receta setup-credentials`
 - [x] Emitir attestation de prueba para una farmacia — las dos farmacias de la demo
 - [x] Probar los cinco motivos de rechazo: sin credencial, emisor no autorizado, revocada, caducada, dirigida a otra cuenta — para los dos roles, en el registro y en el uso
 - [x] `script/Deploy.s.sol` falla ruidosamente fuera de la cadena 31337 si falta la dirección de EAS, un uid de esquema o el emisor autorizado
-- [ ] Apuntar el despliegue a la instancia canónica de EAS en Base Sepolia y registrar allí los dos esquemas
+- [ ] Desplegar EAS v1.2.0 propio en Fuji con `script/DeployEAS.s.sol`: primero `SchemaRegistry`, luego `EAS(schemaRegistry)`. El script existe y compila; falta ejecutarlo con fondos
+- [ ] Registrar los dos esquemas en ese `SchemaRegistry` con `script/RegisterSchemas.s.sol` y anotar los uids que imprime. El script existe y compila; falta ejecutarlo
+- [ ] Volcar el resultado al entorno: `EAS_ADDRESS`, `SCHEMA_REGISTRY_ADDRESS`, `PRACTITIONER_SCHEMA_UID` y `PHARMACY_SCHEMA_UID`
+
+> **No hay EAS canónico en Avalanche.** El directorio `deployments/` del repositorio de `eas-contracts` lista 26 redes y ninguna es de Avalanche, así que aquí no existe ni instancia oficial ni predeploy al que apuntar: las direcciones de EAS y del `SchemaRegistry` son **nuestras**, salidas de nuestro propio despliegue, y hay que tratarlas como tales en toda la documentación y la configuración.
+
+> **Los uids reales no son los de la demo local.** `script/LocalDemo.sol` usa stand-ins calculados como `keccak256(declaración)`; el registro real los deriva de `keccak256(abi.encodePacked(schema, resolver, revocable))`. Los únicos válidos en una red pública son los que imprime `RegisterSchemas.s.sol`, y confundirlos deja el contrato leyendo attestations que no existen.
 
 **Criterio de salida:** el contrato rechaza a una cuenta sin credencial. Desbloquea la CLI.
 
@@ -91,7 +99,7 @@ Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 
 ## Fase 5 — Smart account P-256 y paymaster
 
-La decisión tomada es **cuenta propia con verificación P-256**, no una cuenta de terceros. El precompilado RIP-7212 en `0x…0100` está confirmado y funcionando en Base Sepolia.
+La decisión tomada es **cuenta propia con verificación P-256**, no una cuenta de terceros. El precompilado RIP-7212 en `0x…0100` está confirmado y funcionando en Avalanche Fuji, comprobado con una firma P-256 propia.
 
 - [ ] Smart account ERC-4337 con verificación de firma P-256 contra el precompilado
 - [ ] Ruta de respaldo con verificación P-256 en Solidity si el precompilado no responde
@@ -102,24 +110,24 @@ La decisión tomada es **cuenta propia con verificación P-256**, no una cuenta 
 - [ ] Financiar el paymaster
 - [ ] Mensaje de rechazo por límite de patrocinio agotado
 
-**Criterio de salida:** una emisión completa sin que el médico posea ETH.
+**Criterio de salida:** una emisión completa sin que el médico posea AVAX.
 
 ## Fase 6 — App del médico
 
 Siete pantallas especificadas en [17](17-diseno-y-experiencia.md) y maquetadas en `design/mockups/doctor.html`.
 
-- [ ] Vite + React + TS, consumiendo `design/tokens.css` y `design/components.css`
+- [x] Vite + React + TS, consumiendo `design/tokens.css` y `design/components.css`
 - [ ] **D1** Acceso con passkey — sin la palabra «wallet», sin frase semilla, sin saldo
-- [ ] **D2** Paciente y contexto clínico, con el aviso obligatorio de que el motor solo evalúa lo declarado
-- [ ] **D3** Ítems por principio activo y ATC, con alerta moderada de duplicidad en línea
-- [ ] **D4** Modal de alerta crítica con motivo escrito obligatorio y botón deshabilitado hasta escribirlo
-- [ ] **D5** Firma EIP-712 mostrada como frases legibles, con el distintivo ADSIB `pending-integration`
-- [ ] **D6** QR con la advertencia de que quien lo tiene puede leer la receta
-- [ ] **D7** Listado con los cuatro estados, «Caducada» derivada en el cliente y «Dispensada» sin acciones
-- [ ] Cifrado en el navegador antes de firmar
-- [ ] Cálculo de `contentHash` y `patientCommitment` en el cliente
-- [ ] Generación del QR con `qrcode`
-- [ ] Supresión de repetición de alertas ya desestimadas
+- [x] **D2** Paciente y contexto clínico, con el aviso obligatorio de que el motor solo evalúa lo declarado
+- [x] **D3** Ítems por principio activo y ATC, con alerta moderada de duplicidad en línea
+- [x] **D4** Modal de alerta crítica con motivo escrito obligatorio y botón deshabilitado hasta escribirlo
+- [x] **D5** Firma EIP-712 mostrada como frases legibles, con el distintivo ADSIB `pending-integration`
+- [x] **D6** QR con la advertencia de que quien lo tiene puede leer la receta
+- [x] **D7** Listado con los cuatro estados, «Caducada» derivada en el cliente y «Dispensada» sin acciones
+- [x] Cifrado en el navegador antes de firmar
+- [x] Cálculo de `contentHash` y `patientCommitment` en el cliente
+- [x] Generación del QR con `qrcode`
+- [x] Supresión de repetición de alertas ya desestimadas
 
 **Criterio de salida:** QR generado y legible por la app de farmacia.
 
@@ -127,18 +135,18 @@ Siete pantallas especificadas en [17](17-diseno-y-experiencia.md) y maquetadas e
 
 Ocho pantallas, maquetadas en `design/mockups/pharmacy.html`. Es la única PWA del proyecto.
 
-- [ ] Vite + React + TS con manifiesto y modo `standalone`
-- [ ] Service worker que cachea **solo** el armazón, nunca contenido clínico ni respuestas de verificación
-- [ ] **P1** Acceso con comprobación previa de la credencial
-- [ ] **P2** Escáner con `@zxing/browser` a pantalla completa
-- [ ] **P3** Las cinco comprobaciones enumeradas, no un spinner
-- [ ] **P4** Receta descifrada y botón explícito de confirmar entrega
-- [ ] **P5** Comprobante con la evidencia en cadena
-- [ ] **P6** Pantalla de rechazo por dispensación previa, a 48 px, con `dispensedBy` y `dispensedAt`
-- [ ] **P7** Mensajes diferenciados para caducada, cancelada, no registrada, credencial revocada e integridad rota
-- [ ] **P8** Entrada manual del código
-- [ ] Verificación de correspondencia `keccak256(patientId, salt) == patientCommitment`
-- [ ] Verificación de la firma EIP-712 del prescriptor
+- [x] Vite + React + TS con manifiesto y modo `standalone`
+- [x] Service worker que cachea **solo** el armazón, nunca contenido clínico ni respuestas de verificación
+- [x] **P1** Acceso con comprobación previa de la credencial
+- [x] **P2** Escáner con `@zxing/browser` a pantalla completa
+- [x] **P3** Las cinco comprobaciones enumeradas, no un spinner
+- [x] **P4** Receta descifrada y botón explícito de confirmar entrega
+- [x] **P5** Comprobante con la evidencia en cadena
+- [x] **P6** Pantalla de rechazo por dispensación previa, a 48 px, con `dispensedBy` y `dispensedAt`
+- [x] **P7** Mensajes diferenciados para caducada, cancelada, no registrada, credencial revocada e integridad rota
+- [x] **P8** Entrada manual del código
+- [x] Verificación de correspondencia `keccak256(patientId, salt) == patientCommitment`
+- [x] Verificación de la firma EIP-712 del prescriptor
 
 **Criterio de salida:** el segundo escaneo muestra el rechazo.
 

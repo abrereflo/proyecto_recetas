@@ -1,19 +1,23 @@
 # 01 — Arquitectura
 
-Corremos sobre **Base Sepolia**, un L2 público de Ethereum. No hay blockchain de consorcio, no hay red privada y no hay ambigüedad: la decisión está tomada y el resto del documento la asume. La arquitectura se apoya en cuatro piezas nativas de Ethereum que juntas hacen que un médico pueda firmar una receta sin tener ETH, sin instalar una extensión y sin ver nunca la palabra "wallet": abstracción de cuenta, paymaster, passkeys y EIP-712.
+Corremos sobre **Avalanche Fuji**, la testnet de la C-Chain de Avalanche. Avalanche es una **L1 pública e independiente**, no una L2 de Ethereum: su C-Chain es compatible con EVM, pero no publica datos ni pruebas en Ethereum y no hereda su seguridad. Lo decimos así de claro porque cambia qué garantías puede prometer el sistema. Lo que no cambia es el resto: no hay blockchain de consorcio, no hay red privada, y la arquitectura sigue apoyándose en cuatro estándares del ecosistema Ethereum que corren igual sobre cualquier EVM y que juntos hacen que un médico pueda firmar una receta sin tener AVAX, sin instalar una extensión y sin ver nunca la palabra "wallet": abstracción de cuenta, paymaster, passkeys y EIP-712.
 
 ## Decisión de cadena
 
 | Red | Estado | Motivo |
 |---|---|---|
-| **Base Sepolia** | **Elegida** | Mejor tooling disponible hoy para paymaster y passkeys, documentación madura y despliegue rápido en el plazo del buildathon |
+| **Avalanche Fuji** | **Elegida** | Cadena EVM pública con el precompilado RIP-7212 comprobado en vivo, que es la condición dura de las passkeys. El resto del diseño —EIP-712, ERC-4337, EAS— es estándar EVM y no depende de que la cadena sea una L2. Ver también el track de Avalanche en [15](15-track-y-entrega.md) |
+| Base Sepolia | Alternativa descartada | Era la elección anterior de este documento, por su tooling maduro de paymaster y passkeys. Se abandona al migrar a Avalanche |
 | Arbitrum Sepolia | Alternativa equivalente | Ecosistema ERC-4337 sólido; cambiar implica reconfigurar bundler y paymaster |
 | Scroll Sepolia | Alternativa equivalente | zkEVM con buen soporte de cuenta; menor densidad de proveedores de paymaster |
 
-`SUPUESTO:` el `chainId` de Base Sepolia es 84532. Se confirma en el primer despliegue con Foundry y se fija en el dominio EIP-712.
+El `chainId` de Avalanche Fuji es 43113, confirmado contra el RPC público `https://api.avax-test.network/ext/bc/C/rpc`, y se fija en el dominio EIP-712. El explorador es `https://testnet.snowtrace.io` y la moneda nativa es AVAX, no ETH.
 
-> **Por qué un L2 público y no una red privada.**
-> Una red de consorcio exige acuerdos de gobernanza, nodos operados por instituciones y un comité que no existe. En setenta y dos horas no se construye eso. Un L2 público nos da finalidad rápida, coste bajo, herramientas maduras y verificabilidad por cualquiera, que es justamente lo que un jurado puede comprobar en vivo.
+> **El coste honesto de esta decisión.**
+> El motivo por el que este documento elegía Base era el tooling de bundler y paymaster de ERC-4337, maduro y documentado allí. Al migrar, ese motivo deja de aplicar y no se lo reemplaza por una afirmación equivalente sobre Avalanche que no se ha comprobado. `VERIFICAR:` disponibilidad y condiciones de un proveedor de bundler y paymaster ERC-4337 en Fuji, antes de comprometer la abstracción de cuenta. Lo que sí está comprobado es el precompilado P-256, que es la pieza sin la cual las passkeys no tendrían un plan alternativo barato.
+
+> **Por qué una cadena pública y no una red privada.**
+> Una red de consorcio exige acuerdos de gobernanza, nodos operados por instituciones y un comité que no existe. En setenta y dos horas no se construye eso. Una cadena pública nos da finalidad rápida, coste bajo, herramientas maduras y verificabilidad por cualquiera, que es justamente lo que un jurado puede comprobar en vivo. Ese argumento nunca dependió de que la cadena fuese una L2: vale igual para una L1 pública como Avalanche.
 
 ### Camino de producción (post-buildathon)
 
@@ -21,8 +25,8 @@ Corremos sobre **Base Sepolia**, un L2 público de Ethereum. No hay blockchain d
 > Si un regulador exigiera que los datos no residan en una red pública, existe una migración conocida: red permisionada Hyperledger Besu con consenso QBFT, anclando periódicamente la raíz de su estado en L1 de Ethereum para heredar inmutabilidad verificable externamente. Es un camino más caro y más lento, y no se adopta salvo que un requisito legal lo obligue.
 
 > **Decisión pendiente — D-01**
-> **Contexto.** Base Sepolia es testnet. Después del buildathon hay que decidir hacia dónde va el sistema.
-> **Opciones.** (a) Base mainnet u otro L2 en mainnet. (b) Red Besu permisionada anclada a L1. (c) Permanecer en testnet mientras dure la validación del problema.
+> **Contexto.** Avalanche Fuji es testnet. Después del buildathon hay que decidir hacia dónde va el sistema.
+> **Opciones.** (a) La C-Chain de Avalanche en mainnet, u otra cadena EVM pública en mainnet. (b) Red Besu permisionada anclada a L1. (c) Permanecer en testnet mientras dure la validación del problema.
 > **Recomendación.** Opción (c) mientras se ejecuta la validación de [D-23](00-vision-y-alcance.md), luego (a). La opción (b) solo si aparece una exigencia normativa explícita.
 > **Impacto si se difiere.** Ninguno a corto plazo; la decisión no bloquea el MVP.
 
@@ -35,7 +39,7 @@ flowchart TB
     Patient["Paciente<br/>solo recibe el QR"]
     Issuer["Emisor de credenciales<br/>Colegio Médico / autoridad sanitaria"]
 
-    System["Receta electrónica verificable<br/>Base Sepolia + almacenamiento cifrado off-chain"]
+    System["Receta electrónica verificable<br/>Avalanche Fuji + almacenamiento cifrado off-chain"]
 
     Doctor --> System
     Pharmacy --> System
@@ -59,7 +63,7 @@ flowchart TB
         EntryPoint["EntryPoint<br/>contrato canónico"]
     end
 
-    subgraph Chain["Base Sepolia"]
+    subgraph Chain["Avalanche Fuji"]
         PR["PrescriptionRegistry"]
         EAS["EAS<br/>attestations de credenciales"]
     end
@@ -130,7 +134,7 @@ sequenceDiagram
 | Smart account | Contrato del médico; define qué firma considera válida |
 | Paymaster | Contrato que se compromete a cubrir el gas de la operación |
 
-**Alternativa: EIP-7702.** Permite que una cuenta externa delegue temporalmente en código de contrato, obteniendo capacidades de smart account sin desplegar una. Es más simple si el usuario ya tiene wallet. En nuestro caso el médico **no** tiene wallet, así que ERC-4337 con despliegue diferido de la cuenta encaja mejor. `VERIFICAR:` disponibilidad de EIP-7702 en Base Sepolia al momento del despliegue.
+**Alternativa: EIP-7702.** Permite que una cuenta externa delegue temporalmente en código de contrato, obteniendo capacidades de smart account sin desplegar una. Es más simple si el usuario ya tiene wallet. En nuestro caso el médico **no** tiene wallet, así que ERC-4337 con despliegue diferido de la cuenta encaja mejor. `VERIFICAR:` disponibilidad de EIP-7702 en Avalanche Fuji al momento del despliegue.
 
 ### Paymaster: el médico nunca compra ETH
 
@@ -157,10 +161,10 @@ La clave del médico es una passkey del dispositivo: se genera en el enclave seg
 |---|---|
 | Curva | secp256r1 (P-256), la que usan WebAuthn y los enclaves seguros |
 | Problema | El EVM verifica de forma nativa secp256k1, no P-256 |
-| Solución | **RIP-7212**, precompilado de verificación de firmas P-256, disponible en varios L2 incluida la familia OP Stack |
+| Solución | **RIP-7212**, precompilado de verificación de firmas P-256, adoptado por varias cadenas EVM, entre ellas la C-Chain de Avalanche |
 | Alternativa | Verificación de P-256 en Solidity, correcta pero mucho más costosa en gas |
 
-`VERIFICAR:` presencia del precompilado RIP-7212 en Base Sepolia antes de fijar la implementación. Si no estuviera, el plan alternativo es una biblioteca de verificación P-256 en Solidity, asumiendo mayor consumo de gas cubierto por el paymaster.
+El precompilado RIP-7212 está presente y operativo en Avalanche Fuji en `0x0000000000000000000000000000000000000100`, comprobado con una firma P-256 generada localmente (ver [16](16-plan-de-ejecucion.md)). El plan alternativo —una biblioteca de verificación P-256 en Solidity, con mayor consumo de gas cubierto por el paymaster— queda descartado salvo que el precompilado deje de estar disponible.
 
 ### EIP-712: el médico firma algo legible
 
@@ -183,7 +187,7 @@ struct Prescription {
 // EIP712Domain(
 //   string  name              = "RecetaVerificable",
 //   string  version           = "1",
-//   uint256 chainId           = 84532,            // Base Sepolia
+//   uint256 chainId           = 43113,            // Avalanche Fuji
 //   address verifyingContract = <PrescriptionRegistry>
 // )
 ```
@@ -231,7 +235,9 @@ schema PharmacyCredential:
 | Verificabilidad pública | Cualquiera puede comprobar la credencial de una dirección sin pedirnos permiso |
 | Datos personales | La attestation contiene número de matrícula, que es dato profesional público. No contiene datos de salud ni del paciente |
 
-`VERIFICAR:` direcciones de los contratos de EAS en Base Sepolia antes del despliegue. No se citan aquí para no fijar valores sin comprobar.
+**EAS aquí es un despliegue propio del proyecto, no la instancia canónica.** Avalanche no tiene un despliegue oficial de EAS: el repositorio `ethereum-attestation-service/eas-contracts` publica `deployments/` para 26 redes y ninguna es Avalanche, así que no hay dirección canónica que asumir ni predeploy que dar por hecho. `contracts/script/DeployEAS.s.sol` despliega EAS **v1.2.0** —la misma versión de la que está transcrito `contracts/src/IEAS.sol`— en dos pasos: primero `SchemaRegistry`, después `EAS(schemaRegistry)`, porque `EAS` recibe el registro en el constructor y revierte con la dirección cero. Ambos contratos responden `version()` igual a `1.2.0`, que es la comprobación barata de que lo desplegado es lo esperado.
+
+Las dos direcciones son propias de cada despliegue y viajan por configuración (`EAS_ADDRESS`, `SCHEMA_REGISTRY_ADDRESS`), nunca escritas en el código. Los uids de los dos esquemas los imprime `contracts/script/RegisterSchemas.s.sol` y **no coinciden** con los stand-ins locales de `contracts/script/LocalDemo.sol`: el registro real deriva el uid de `keccak256(abi.encodePacked(schema, resolver, revocable))`, mientras que la demo sobre Anvil usa el hash de la declaración. Ver [19](19-despliegue.md).
 
 ### Recuperación social
 
@@ -259,7 +265,7 @@ Esta es la contrapartida honesta de elegir una cadena pública, y el documento n
 |---|---|---|
 | Aplicaciones | Capturar, firmar con passkey, escanear | No contienen la regla antirreutilización |
 | Cuenta y patrocinio | Validar firma P-256, patrocinar gas según política | No custodian contenido clínico |
-| Cadena (Base Sepolia) | Estado autoritativo de la receta y credenciales | No almacena datos personales |
+| Cadena (Avalanche Fuji) | Estado autoritativo de la receta y credenciales | No almacena datos personales |
 | Off-chain | Payload cifrado, motor de reglas, proyección de lectura | No decide si una receta se puede dispensar |
 | Integraciones (Fase 2) | Exponer la receta al software que la farmacia ya usa en el mostrador. Ver [D-26](09-roadmap.md) | No decide nada por sí misma; reutiliza el contrato y las credenciales |
 
@@ -280,7 +286,7 @@ No existe en el MVP. Se declara aquí para que el diseño tenga el lugar donde e
 |---|---|---|
 | Unicidad de dispensación | Imposible dispensar dos veces | Estado en contrato, `revert` en el segundo intento |
 | Fricción cero para el médico | Sin ETH, sin extensión, sin frase semilla | Smart account + paymaster + passkey |
-| Verificabilidad pública | Cualquiera comprueba emisor y estado | L2 público + EAS |
+| Verificabilidad pública | Cualquiera comprueba emisor y estado | Cadena pública + EAS propio del proyecto |
 | Privacidad del paciente | Nada identificable on-chain | Compromiso con sal, cifrado off-chain |
 | Legalidad en Bolivia | Firma con validez jurídica local | Doble firma ADSIB, ver [07](07-seguridad-y-cumplimiento.md) |
 | Operación con red degradada | La farmacia no se bloquea | Ver [D-20](04-smart-contracts.md) |

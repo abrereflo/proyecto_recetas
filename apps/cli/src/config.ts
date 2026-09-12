@@ -148,7 +148,7 @@ export function isLocalChain(chainId: number): boolean {
  * The comment at the top of this file states the rule; this function is what
  * enforces it. `assertLocalEas` already refuses to attest or revoke against a
  * real EAS, but it never covered `issue` and `dispense`, which are the two
- * commands that sign. Pointing `CHAIN_ID` at Base Sepolia — the documented next
+ * commands that sign. Pointing `CHAIN_ID` at Avalanche Fuji — the documented next
  * step of the project — would otherwise sign real public-network transactions
  * with keys that ship inside every Foundry installation.
  */

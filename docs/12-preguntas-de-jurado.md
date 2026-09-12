@@ -8,7 +8,7 @@ Diez preguntas que van a caer, con la respuesta corta que hay que tener ensayada
 
 ### 1. ¿Qué construyeron en tres días?
 
-Un contrato desplegado en Base Sepolia con dos funciones, `issue` y `dispense`, más dos aplicaciones web: el médico firma con su huella y genera un QR, la farmacia lo escanea y dispensa. Las credenciales de médicos y farmacias son attestations en EAS, con revocación. El segundo intento de dispensar la misma receta revierte, y eso lo pueden ver en vivo. → [09](09-roadmap.md)
+Un contrato desplegado en Avalanche Fuji con dos funciones, `issue` y `dispense`, más dos aplicaciones web: el médico firma con su huella y genera un QR, la farmacia lo escanea y dispensa. Las credenciales de médicos y farmacias son attestations en EAS, con revocación. El segundo intento de dispensar la misma receta revierte, y eso lo pueden ver en vivo. → [09](09-roadmap.md)
 
 ### 2. ¿Por qué blockchain y no una base de datos con firma ADSIB?
 
@@ -16,7 +16,7 @@ Una base de datos con firma ADSIB resuelve la autenticidad pero no la unicidad e
 
 ### 3. ¿Quién paga el gas y cómo firma un médico que no sabe qué es una wallet?
 
-El médico firma con la huella de su teléfono: es una passkey, la misma tecnología con la que desbloquea el banco, y no hay frase semilla ni extensión. El gas lo paga un paymaster que patrocina solo a cuentas con credencial profesional vigente y solo para llamadas a nuestro contrato. En producción lo financiaría la clínica o la caja de salud; el coste por receta en un L2 es bajo, pero es un número que vamos a medir, no a estimar. → [01](01-arquitectura.md)
+El médico firma con la huella de su teléfono: es una passkey, la misma tecnología con la que desbloquea el banco, y no hay frase semilla ni extensión. El gas lo paga un paymaster que patrocina solo a cuentas con credencial profesional vigente y solo para llamadas a nuestro contrato. En producción lo financiaría la clínica o la caja de salud; el coste por receta en esta red es bajo, pero es un número que vamos a medir, no a estimar. → [01](01-arquitectura.md)
 
 ### 4. Si la receta se cifra con la clave del paciente, ¿cómo la lee la farmacia?
 
@@ -40,11 +40,11 @@ Hoy no las manejamos: el MVP es de un solo uso, y lo decimos porque es la mitad 
 
 ### 9. ¿Cuál es el incentivo de la farmacia para adoptarlo, y el del laboratorio para correr un nodo?
 
-La farmacia gana poder rechazar una receta ya dispensada, que hoy no puede detectar, y dejar evidencia de qué entregó y cuándo ante una auditoría. El laboratorio no necesita correr ningún nodo: esa era una idea del planteamiento de consorcio que abandonamos al pasarnos a un L2 público, donde la infraestructura ya existe. El incentivo real todavía no lo hemos validado con farmacéuticos de Cochabamba, y esa validación es parte del plan. → [13](13-pitch-y-sostenibilidad.md)
+La farmacia gana poder rechazar una receta ya dispensada, que hoy no puede detectar, y dejar evidencia de qué entregó y cuándo ante una auditoría. El laboratorio no necesita correr ningún nodo: esa era una idea del planteamiento de consorcio que abandonamos al pasarnos a una cadena pública, donde la infraestructura ya existe. El incentivo real todavía no lo hemos validado con farmacéuticos de Cochabamba, y esa validación es parte del plan. → [13](13-pitch-y-sostenibilidad.md)
 
 ### 10. ¿Cuánto cuesta una receta en gas y cuánto tarda en verificarse?
 
-Lo vamos a medir en el buildathon y les damos el número real, no una estimación. La verificación es una lectura del contrato, así que no cuesta gas y tarda lo que tarde la consulta al nodo; la escritura es una transacción en un L2, del orden de centavos. Si alguien pregunta por cifras exactas ahora mismo, la respuesta honesta es que aún no las tenemos medidas. → [08](08-stack-y-entorno.md)
+Lo vamos a medir en el buildathon y les damos el número real, no una estimación. La verificación es una lectura del contrato, así que no cuesta gas y tarda lo que tarde la consulta al nodo; la escritura es una transacción ordinaria en la C-Chain de Avalanche, barata pero todavía sin medir. Si alguien pregunta por cifras exactas ahora mismo, la respuesta honesta es que aún no las tenemos medidas. → [08](08-stack-y-entorno.md)
 
 ---
 
@@ -56,8 +56,8 @@ Lo vamos a medir en el buildathon y les damos el número real, no una estimació
 | "¿Cumple con la ley boliviana?" | Afirmarlo | "El diseño contempla la doble firma con ADSIB, que es lo que le daría validez legal. Todavía no está implementada y necesitamos asesoría legal local" |
 | "¿Y la ley de protección de datos?" | Inventar una | "Hasta donde hemos podido verificar, Bolivia no tiene una ley general de protección de datos; existe la vía constitucional del artículo 130. Adoptamos minimización y cifrado por decisión propia, no por obligación" |
 | "¿Tienen datos del problema en Bolivia?" | Inventar una cifra | "No. Nuestra fuente es investigación argelina y literatura estadounidense. Validar el problema en Cochabamba con entrevistas es nuestro siguiente paso, y preferimos decirlo" |
-| "¿Por qué no Solana o Hyperledger?" | Descalificar otras cadenas | "Elegimos un L2 de Ethereum por el tooling de abstracción de cuenta y passkeys, que es lo que nos permite que el médico no toque una wallet. Es la razón concreta, no una preferencia de ecosistema" |
-| "¿Escala a todo el país?" | Decir que sí | "No lo hemos medido. Un L2 procesa este volumen sin problema en teoría, pero no hemos hecho pruebas de carga y no vamos a afirmarlo" |
+| "¿Por qué no Solana o Hyperledger?" | Descalificar otras cadenas | "Elegimos EVM por el tooling de abstracción de cuenta y passkeys, y dentro de EVM la C-Chain de Avalanche porque tiene el precompilado RIP-7212 de verificación P-256 y lo comprobamos nosotros. Eso es lo que permite que el médico firme con la huella y no toque una wallet. Es la razón concreta, no una preferencia de ecosistema" |
+| "¿Escala a todo el país?" | Decir que sí | "No lo hemos medido. La C-Chain procesa este volumen sin problema en teoría, pero no hemos hecho pruebas de carga y no vamos a afirmarlo" |
 | "¿Trazan el medicamento desde el laboratorio?" | Decir que sí con ATC | "No. ATC clasifica fármacos, no rastrea unidades; para eso hace falta serialización GS1. Es un producto distinto y lo dejamos fuera a propósito" |
 | "¿Sirve para estupefacientes y psicotrópicos, que es donde está el problema?" | Decir que sí | "Todavía no, y es deliberado. Hoy se controlan con el formulario valorado que emite el SEDES y que la farmacia retiene: el papel numerado **es** el control, y sustituirlo requiere autorización, no una decisión nuestra. Los excluimos del piloto. Pero ese recetario es justamente nuestro modelo en papel: uso único, numerado por autoridad, retenido como prueba" |
 | "¿Contra qué cruzan la alergia? ¿De dónde sale el historial del paciente?" | Decir "del historial en la blockchain" | "De lo que el médico declara en el formulario en ese momento. No hay historial del paciente: nuestro modelo de privacidad impide agrupar sus recetas, y eso lo elegimos. El motor no detecta nada que el médico no sepa o no declare. El historial de la clínica, con consentimiento, es Fase 2" |
