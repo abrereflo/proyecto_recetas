@@ -41,7 +41,9 @@ Este documento hace dos cosas que suelen evitarse. Primero, dice qué ataques **
 |---|---|---|
 | **Ley 1737 del Medicamento** | Régimen del medicamento en Bolivia | Marco de la prescripción y de los productos autorizados. `VERIFICAR:` requisitos formales que la norma impone a la receta |
 | **AGEMED** | Agencia estatal de medicamentos y tecnologías en salud | Registro sanitario de medicamentos autorizados. Es la fuente natural del catálogo. Ver [D-07](03-modelo-de-datos.md) |
-| **Ley 913** | Lucha contra el tráfico ilícito de sustancias controladas | Define el régimen de sustancias controladas y su prescripción. Ver [D-18](#d-18) |
+| **Ley 913** | Lucha contra el tráfico ilícito de sustancias controladas | Define el régimen de sustancias controladas y su prescripción mediante formulario oficial. Ver [D-18](#d-18) |
+| **DS 3434** | Reglamento de la Ley 913 | Desarrolla el régimen; las sustancias se clasifican en listas anexas |
+| **SEDES** | Servicio Departamental de Salud | Su Departamento Regional de Farmacia emite los formularios de receta valorada y controla a las farmacias que manejan sustancias controladas. Ver [D-18](#d-18) |
 | **Ley 164** | Ley General de Telecomunicaciones y TIC | Reconoce la firma digital y el documento digital |
 | **DS 1793** | Reglamento de la Ley 164 | Desarrolla el régimen de certificados y firma digital |
 | **ADSIB** | Agencia para el Desarrollo de la Sociedad de la Información en Bolivia | Autoridad de certificación estatal. Emite los certificados de firma digital |
@@ -67,12 +69,49 @@ Este documento hace dos cosas que suelen evitarse. Primero, dice qué ataques **
 > **Recomendación.** Combinar (a) y (b): consentimiento explícito documentado, más adopción declarada de principios de minimización y cifrado. La opción (c) equivale a tratar datos de salud sin marco.
 > **Impacto si se difiere.** El proyecto trata datos sensibles sin política declarada, lo que es un riesgo reputacional y, si la legislación cambia, también legal.
 
+## Sustancias controladas: el recetario oficial
+
+Es donde el sistema aportaría más valor y, a la vez, donde **no puede entrar sin autorización**. Conviene entender por qué, porque el motivo es también el mejor argumento del proyecto.
+
+### Cómo funciona hoy
+
+| Tipo de receta | Para qué | Formulario | Quién lo emite | Qué pasa con el papel |
+|---|---|---|---|---|
+| **Receta Valorada** | Estupefacientes | Formulario valorado | **Departamento Regional de Farmacia del SEDES** | La farmacia lo retiene y lo asienta en el *Libro de Control de Estupefacientes* |
+| **Receta Archivada** | Psicotrópicos | SNUS-02 | Ministerio de Salud | La farmacia lo retiene y archiva; se asienta en el *Libro de Psicotrópicos* |
+
+El régimen lo fijan la **Ley 913** y su reglamento, el **DS 3434**, con las sustancias clasificadas en listas anexas. Solo se dispensan en establecimientos autorizados y únicamente contra formulario oficial. El SEDES controla a las farmacias que manejan sustancias controladas.
+
+> `VERIFICAR:` el Manual para la Administración de Psicotrópicos y Estupefacientes del Ministerio de Salud es anterior a la Ley 913 y puede haber circulares posteriores de AGEMED que modifiquen formularios o procedimientos. Esto se confirma en el Departamento Regional de Farmacia del SEDES Cochabamba, no por internet.
+
+### Por qué esto bloquea el piloto
+
+**El formulario físico numerado es el mecanismo de control, no un trámite alrededor de él.** No se puede sustituir por un código QR por decisión propia: hace falta cambio normativo o autorización expresa de la autoridad competente. Un profesional que prescriba un estupefaciente fuera del formulario oficial queda expuesto bajo Ley 913. No es solo un riesgo del proyecto: es un riesgo personal de cada médico que participe en el piloto.
+
+### Por qué esto es, además, nuestro mejor argumento
+
+Mirá la forma de lo que ya existe en Bolivia:
+
+> Un formulario **numerado por una autoridad**, de **un solo uso**, que la farmacia **retiene como prueba** y **asienta en un libro de control**.
+
+Eso es exactamente el modelo del contrato: emisión autorizada por credencial, dispensación única, evento retenido como prueba. **Un libro de control es un registro secuencial de eventos.** El recetario valorado del SEDES es la implementación en papel del mismo modelo de control que nosotros implementamos en cadena.
+
+La frase para el pitch:
+
+> Bolivia ya tiene un sistema de receta de uso único, numerada por autoridad y retenida como prueba: el recetario valorado del SEDES. Funciona en papel, se falsifica, se fotocopia y se audita a mano. No inventamos el modelo de control, lo implementamos en una infraestructura donde el uso único es una garantía técnica y no una promesa administrativa.
+
+Eso responde de una sola vez por qué blockchain, qué problema local se resuelve y para qué le sirve al Estado. Y da un interlocutor con nombre de oficina: el **Departamento Regional de Farmacia del SEDES Cochabamba**.
+
 <a id="d-18"></a>
 
-> **Decisión pendiente — D-18**
-> **Contexto.** Las sustancias controladas bajo Ley 913 son precisamente donde el sistema aportaría más valor, y también donde los requisitos formales son más estrictos (recetarios oficiales, registros, controles).
-> **Opciones.** (a) Excluir sustancias controladas del piloto. (b) Incluirlas con doble firma y registro reforzado, previa autorización de la autoridad competente. (c) Diseñar un flujo específico junto con la autoridad.
-> **Recomendación.** Opción (a) para el MVP y el primer piloto. Abordar las sustancias controladas sin autorización previa expone al proyecto y a los médicos participantes.
+> **Decisión pendiente — D-18: sustancias controladas bajo Ley 913**
+>
+> **Contexto.** El control vigente se apoya en un formulario físico que emite el SEDES y que la farmacia retiene. Digitalizarlo no es una decisión de producto: requiere autorización de la autoridad competente.
+>
+> **Opciones.** (a) Excluir sustancias controladas del piloto. (b) Incluirlas con doble firma y registro reforzado, previa autorización expresa. (c) Diseñar un flujo específico junto con el Departamento Regional de Farmacia del SEDES, en el que el sistema **complemente** el formulario oficial en lugar de reemplazarlo, registrando la dispensación sin sustituir el papel.
+>
+> **Recomendación.** (a) para el MVP y el primer piloto. Después, (c) como conversación con el SEDES: es el camino realista, porque no pide cambiar la norma sino demostrar el modelo junto a ella. La opción (b) exige un trámite que no cabe en el horizonte del piloto.
+>
 > **Impacto si se difiere.** Ninguno técnico. Pero si el pitch promete combatir el tráfico de sustancias controladas sin este trabajo hecho, la promesa no se sostiene.
 
 ## Doble firma: ADSIB y Ethereum
@@ -148,7 +187,7 @@ sequenceDiagram
 | Firma con validez legal | Firma PKCS#7 con certificado ADSIB sobre `contentHash` | D-17 en este documento y [05](05-almacenamiento-y-cifrado.md) |
 | Identificación fiable del prescriptor | Attestation EAS más verificación en el alta | [02](02-roles-y-permisos.md) |
 | Producto autorizado en Bolivia | Validación contra registro sanitario de AGEMED | [D-07](03-modelo-de-datos.md) |
-| Sustancias controladas | Excluidas del piloto | [D-18](#d-18) |
+| Sustancias controladas | Excluidas del piloto: el formulario valorado del SEDES es el control vigente y no se puede sustituir sin autorización | [D-18](#d-18) |
 | Confidencialidad de datos de salud | AES-256-GCM y cero datos personales on-chain | [03](03-modelo-de-datos.md), [05](05-almacenamiento-y-cifrado.md) |
 | Trazabilidad de accesos | Eventos on-chain más registro off-chain | [04](04-smart-contracts.md) |
 | Supresión de datos | Crypto-shredding | [05, D-11](05-almacenamiento-y-cifrado.md) |

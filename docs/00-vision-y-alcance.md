@@ -37,18 +37,21 @@ El informe base se apoya en investigación del Laboratorio LIRE (Universidad de 
 4. ¿Cuánto tiempo dedica a descifrar o confirmar por teléfono lo que dice una receta?
 5. ¿Qué software de gestión usa hoy y quién decide cambiarlo?
 6. ¿Qué tendría que pasar para que usted adoptara un sistema nuevo en el mostrador?
+7. ¿Maneja sustancias controladas? ¿Cómo funciona en la práctica la receta valorada y el libro de control?
+8. ¿Cuánto tiempo le lleva llevar los libros de estupefacientes y psicotrópicos, y qué revisa el SEDES cuando los inspecciona?
 
 **A médicos**
 
-7. ¿Cómo emite recetas hoy: talonario, plantilla impresa, sistema de la clínica?
-8. ¿Le ha llegado alguna vez el reclamo de que alguien usó una receta suya?
-9. ¿Usa firma digital ADSIB o algún certificado? ¿Para qué trámites?
-10. ¿Qué le haría abandonar el talonario de papel?
+9. ¿Cómo emite recetas hoy: talonario, plantilla impresa, sistema de la clínica?
+10. ¿Le ha llegado alguna vez el reclamo de que alguien usó una receta suya?
+11. ¿Usa firma digital ADSIB o algún certificado? ¿Para qué trámites?
+12. ¿Cómo consigue los formularios de receta valorada y qué fricción le genera el trámite?
+13. ¿Qué le haría abandonar el talonario de papel?
 
 **A ambos**
 
-11. ¿Qué pasa cuando se cae internet?
-12. ¿Quién debería pagar por un sistema así: la clínica, la farmacia, la caja de salud, el paciente?
+14. ¿Qué pasa cuando se cae internet?
+15. ¿Quién debería pagar por un sistema así: la clínica, la farmacia, la caja de salud, el paciente?
 
 ## Alcance del MVP (72 horas)
 

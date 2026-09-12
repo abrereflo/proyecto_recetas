@@ -26,13 +26,14 @@ Un médico firma una receta sin saber qué es una wallet y sin pagar gas; la far
 | [12-preguntas-de-jurado.md](12-preguntas-de-jurado.md) | Las diez preguntas difíciles con respuesta ensayada | Equipo |
 | [13-pitch-y-sostenibilidad.md](13-pitch-y-sostenibilidad.md) | Orden del pitch, métricas objetivo y quién paga esto | Equipo, jurado |
 | [14-trazabilidad-informe-base.md](14-trazabilidad-informe-base.md) | Qué pasó con cada afirmación del informe base: conservada, transformada, corregida o descartada, con archivo y línea | Dirección, quien defienda el pivote |
+| [15-track-y-entrega.md](15-track-y-entrega.md) | Track elegido, requisitos de entrega en Devfolio, bounties de patrocinadores y orden de prioridades hasta el cierre | Equipo, obligatorio antes de entregar |
 
 ## Rutas de lectura
 
 | Perfil | Recorrido |
 |---|---|
 | Quien construye | [11 Glosario](11-glosario.md) → [01 Arquitectura](01-arquitectura.md) → [04 Contratos](04-smart-contracts.md) → [08 Stack](08-stack-y-entorno.md) → [09 Roadmap](09-roadmap.md) |
-| Quien presenta | [00 Visión](00-vision-y-alcance.md) → [13 Pitch](13-pitch-y-sostenibilidad.md) → [12 Preguntas de jurado](12-preguntas-de-jurado.md) → [10 Estado del arte](10-estado-del-arte.md) |
+| Quien presenta | [15 Track y entrega](15-track-y-entrega.md) → [00 Visión](00-vision-y-alcance.md) → [13 Pitch](13-pitch-y-sostenibilidad.md) → [12 Preguntas de jurado](12-preguntas-de-jurado.md) → [10 Estado del arte](10-estado-del-arte.md) |
 | Perfil clínico | [00 Visión](00-vision-y-alcance.md) → [02 Roles](02-roles-y-permisos.md) → [06 Validación clínica](06-validacion-clinica.md) |
 | Perfil legal | [07 Seguridad y cumplimiento](07-seguridad-y-cumplimiento.md) → [05 Almacenamiento y cifrado](05-almacenamiento-y-cifrado.md) → [03 Modelo de datos](03-modelo-de-datos.md) |
 | Dirección y quien defiende el pivote | [00 Visión](00-vision-y-alcance.md) → [14 Trazabilidad](14-trazabilidad-informe-base.md) → [10 Estado del arte](10-estado-del-arte.md) → [09 Roadmap](09-roadmap.md) |
@@ -78,6 +79,7 @@ Identificadores únicos en todo el conjunto documental.
 | D-24 | Par de claves de cifrado, separado de la passkey de firma | [05](05-almacenamiento-y-cifrado.md) |
 | D-25 | Procedencia del contexto clínico del paciente | [06](06-validacion-clinica.md) |
 | D-26 | Integración con el software de gestión de farmacia | [09](09-roadmap.md) |
+| D-27 | Desplegar también en Avalanche para el bounty | [15](15-track-y-entrega.md) |
 
 ## Siguiente paso
 

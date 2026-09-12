@@ -2,6 +2,8 @@
 
 Tres minutos, siete bloques, un solo momento que el jurado debe recordar: el segundo escaneo rechazado. Todo lo demás es preparación para llegar a esa pantalla y contexto para salir de ella. Este documento fija el orden, lo que se dice en cada bloque y quién pagaría esto si funcionara.
 
+> **El formato son 5 minutos: 3 de showcase y 2 de preguntas.** Los siete bloques de abajo ocupan los 3 minutos de showcase. Los 2 minutos restantes son de preguntas y se preparan con [12-preguntas-de-jurado.md](12-preguntas-de-jurado.md). Ver [15](15-track-y-entrega.md) para el resto de las reglas de entrega.
+
 ## Estructura del pitch
 
 | # | Bloque | Tiempo | Qué se dice |
@@ -21,6 +23,8 @@ Tres minutos, siete bloques, un solo momento que el jurado debe recordar: el seg
 Contar una escena, no un dato: un paciente llega a una farmacia con una receta en papel; el farmacéutico no tiene forma de saber si esa receta la firmó un médico con matrícula vigente ni si ya fue dispensada esa mañana en la farmacia de la esquina.
 
 > **No inventar cifras bolivianas.** Si se quiere un número, decir con todas las letras de dónde sale: "en los trabajos que revisamos, todos de otros países…". La honestidad sobre la falta de datos locales se convierte en el bloque 6.
+
+> **El ancla local que sí tenemos, sin necesidad de cifras.** Bolivia ya resuelve esto en papel para los medicamentos más sensibles: el recetario valorado que emite el SEDES es una receta numerada por una autoridad, de un solo uso, que la farmacia retiene y asienta en un libro de control. Existe, funciona y se falsifica. Nombrarlo en el bloque 1 o en el 5 demuestra que se entiende el problema local sin inventar un dato. Ver [07](07-seguridad-y-cumplimiento.md).
 
 ### 2. Solución en una frase (15 s)
 
