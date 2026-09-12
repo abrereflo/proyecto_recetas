@@ -8,7 +8,7 @@ Setenta y dos horas para llegar a un `revert` proyectado en pantalla. El plan se
 
 ```mermaid
 flowchart TB
-    A["Contrato PrescriptionRegistry<br/>issue + dispense + tests"] --> B["Despliegue en Base Sepolia"]
+    A["Contrato PrescriptionRegistry<br/>issue + dispense + tests"] --> B["Despliegue en Avalanche Fuji"]
     B --> C["Esquemas EAS y attestations<br/>médico y farmacia"]
     C --> D["Smart account + paymaster<br/>flujo patrocinado"]
     D --> E["App del médico:<br/>formulario, cifrado, EIP-712, QR"]
@@ -24,9 +24,9 @@ flowchart TB
 | Bloque | Entregable | Criterio de salida | Recortable |
 |---|---|---|---|
 | 1. Contrato | `PrescriptionRegistry` con `issue`, `dispense`, `cancel`, `verify` | `test_dispense_twice_reverts` pasa | No |
-| 2. Despliegue | Contrato verificado en Base Sepolia | Dirección pública y explorable | No |
+| 2. Despliegue | Contrato verificado en Avalanche Fuji | Dirección pública y explorable | No |
 | 3. Credenciales | Esquemas EAS y attestations de prueba | El contrato rechaza a una cuenta sin credencial | No |
-| 4. Cuenta y gas | Smart account con passkey y paymaster operativo | Una emisión sin que el médico tenga ETH | No |
+| 4. Cuenta y gas | Smart account con passkey y paymaster operativo | Una emisión sin que el médico tenga AVAX | No |
 | 5. App del médico | Formulario, cifrado, firma EIP-712, QR | QR generado y legible | No |
 | 6. App de farmacia | Escáner, verificación, dispensación | El segundo escaneo muestra el rechazo | No |
 | 7. Reglas clínicas | Alergia declarada y duplicidad ATC | Una alerta visible en la demo | **Sí** |
@@ -47,7 +47,7 @@ Si el tiempo aprieta, se recorta en este orden y solo en este orden:
 
 | Riesgo | Probabilidad | Impacto | Mitigación |
 |---|---|---|---|
-| El precompilado P-256 no está disponible en Base Sepolia | Media | Alto | Verificar el primer día; alternativa: verificación P-256 en Solidity, o firma secp256k1 con clave generada en el navegador |
+| El precompilado P-256 no está disponible en Avalanche Fuji | **Descartado: verificado** | Alto | El riesgo se cerró comprobándolo el primer día: RIP-7212 responde en `0x…0100` en Fuji, contrastado con una firma P-256 propia. La alternativa (verificación P-256 en Solidity, o firma secp256k1 con clave generada en el navegador) se conserva solo como respaldo |
 | El proveedor de bundler o paymaster falla | Media | Alto | Segundo proveedor configurado desde el inicio |
 | Integración con EAS más lenta de lo previsto | Media | Medio | Alternativa: registro de credenciales propio en veinte líneas de Solidity, documentando que EAS es el destino |
 | El equipo no domina Foundry | Baja | Alto | Hardhat como alternativa, decidida en las primeras horas y no después |

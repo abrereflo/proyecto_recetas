@@ -43,7 +43,7 @@ flowchart LR
 
 | Momento | Qué se muestra | Qué se dice |
 |---|---|---|
-| 0-20 s | El médico completa la receta y confirma con huella | "Sin extensión, sin frase semilla, sin comprar ETH" |
+| 0-20 s | El médico completa la receta y confirma con huella | "Sin extensión, sin frase semilla, sin comprar AVAX" |
 | 20-35 s | Aparece el QR | "Esto es lo único que el paciente se lleva" |
 | 35-55 s | La farmacia escanea, ve la receta, dispensa | "La farmacia acaba de comprobar contra Ethereum que quien firmó tiene matrícula vigente" |
 | 55-70 s | Segundo escaneo del mismo QR | **"Rechazada. Ya fue dispensada hace treinta segundos."** Pausa |
@@ -57,7 +57,7 @@ Un diagrama, tres cajas y una frase: on-chain va el hash, off-chain va la receta
 
 ```mermaid
 flowchart LR
-    Off["Receta cifrada<br/>off-chain"] --> Hash["Hash + compromiso<br/>on-chain (Base)"]
+    Off["Receta cifrada<br/>off-chain"] --> Hash["Hash + compromiso<br/>on-chain (Avalanche Fuji)"]
     Cred["Credenciales EAS<br/>emisor + revocación"] --> Hash
 ```
 
@@ -67,8 +67,8 @@ Cuatro nombres, una frase cada uno. Este bloque es el que separa un proyecto de 
 
 | Pieza | La frase |
 |---|---|
-| ERC-4337 y paymaster | "El médico nunca compra ETH: un paymaster patrocina solo a cuentas con credencial vigente" |
-| Passkeys y RIP-7212 | "Firma con la huella del teléfono; el L2 verifica esa curva de forma nativa" |
+| ERC-4337 y paymaster | "El médico nunca compra AVAX: un paymaster patrocina solo a cuentas con credencial vigente" |
+| Passkeys y RIP-7212 | "Firma con la huella del teléfono; la cadena verifica esa curva de forma nativa, con el precompilado que ya comprobamos en Fuji" |
 | EIP-712 | "Firma datos legibles off-chain: ve en texto claro qué prescribe y hasta cuándo, no una cadena hexadecimal" |
 | EAS | "La matrícula es una attestation revocable: si la pierde, deja de emitir al instante" |
 
@@ -124,7 +124,7 @@ La forma de romperlo es empezar por un circuito cerrado: **una clínica y las fa
 > **Decisión pendiente — D-22**
 > **Contexto.** Sin modelo de sostenibilidad, el proyecto termina cuando termina el buildathon. Ninguna de las opciones está validada con un pagador real.
 > **Opciones.** (a) Software como servicio cobrado a clínicas y farmacias por suscripción. (b) Convenio con un ente público que financie el patrocinio de gas y la operación. (c) Financiación puente del ecosistema Ethereum, sin emitir token, para sostener el piloto mientras se consigue un pagador. (d) Gratuito hasta un umbral de recetas, luego por suscripción institucional.
-> **Recomendación.** La opción (c) es pista de despegue, no modelo de sostenibilidad: cubre la Fase 1 y el piloto, y se agota. El modelo es (b) o (d), y la validación de D-23 decide cuál. Dentro de (c), el orden importa porque la mayoría de estos programas premia trabajo ya desplegado; ver la tabla siguiente.
+> **Recomendación.** La opción (c) es pista de despegue, no modelo de sostenibilidad: cubre la Fase 1 y el piloto, y se agota. El modelo es (b) o (d), y la validación de D-23 decide cuál. Dentro de (c), el orden importa porque la mayoría de estos programas premia trabajo ya desplegado; ver la tabla siguiente, donde además tres de las seis vías dejaron de aplicar con el cambio de red.
 > **Impacto si se difiere.** El proyecto no sobrevive al evento y el trabajo se pierde.
 
 ### Financiación del ecosistema Ethereum: qué es cada programa
@@ -133,12 +133,14 @@ Ninguno exige emitir un token. Casi todos exigen haber desplegado antes de pedir
 
 | Programa | Naturaleza | Cuándo aplica | Encaje con este proyecto |
 |---|---|---|---|
-| Base Builder Grants | Retroactivo, 1 a 5 ETH, sin formulario: el equipo de Base identifica proyectos por actividad en el ecosistema | Después de desplegar en Base y tener uso visible | Alto. Es la vía más directa y premia exactamente lo que el buildathon produce |
+| Base Builder Grants | Retroactivo, 1 a 5 ETH, sin formulario: el equipo de Base identifica proyectos por actividad en el ecosistema | **Ya no aplica.** Exige actividad en Base, y el proyecto migró a Avalanche Fuji | Nulo desde el cambio de red. La fila se conserva para dejar constancia de que era la vía más directa que teníamos y de por qué desapareció |
 | Ethereum Foundation, Next Billion Fellowship | Fellowship con estipendio para proyectos de impacto real orientados a los próximos mil millones de usuarios; aplicación continua | Con el piloto en marcha y una persona del equipo que lo lidere | Alto. Es el programa de la EF que encaja; el ESP no |
-| Optimism Retro Funding (antes RetroPGF) | Retroactivo. Evalúa impacto de los últimos 180 días de actividad on-chain en la Superchain; exige contratos desplegados, código público y KYC. Base es cadena elegible | No antes de seis meses de operación real | Medio. Relevante a mediano plazo, inútil para arrancar |
+| Optimism Retro Funding (antes RetroPGF) | Retroactivo. Evalúa impacto de los últimos 180 días de actividad on-chain en la Superchain; exige contratos desplegados, código público y KYC | **Ya no aplica.** Solo puntúa actividad on-chain en cadenas de la Superchain, y Avalanche no es una de ellas | Nulo desde el cambio de red |
 | Gitcoin Grants Program | Financiación cuadrática: el matching depende del número de donantes de la comunidad. Grants Stack y Grants Lab cerraron en mayo de 2025; las rondas continúan | En cualquier ronda abierta | Bajo. Sin comunidad cripto-nativa que done, el resultado es simbólico |
 | Ethereum Foundation, ESP | Subvenciones a infraestructura core: criptografía, ZK, auditorías, investigación de protocolo | No aplica | Nulo para una aplicación de salud. Se lista para no confundirlo con la fellowship |
-| Base Ecosystem Fund | Capital de riesgo de Coinbase Ventures, dilutivo | Solo si se opta por una empresa con inversores | No es una subvención. Se lista para no confundirlo con Builder Grants |
+| Base Ecosystem Fund | Capital de riesgo de Coinbase Ventures, dilutivo | **Ya no aplica**, y tampoco era una subvención | Nulo. Se listaba para no confundirlo con Builder Grants |
+
+> **Tres de las seis vías caen con la migración a Avalanche Fuji.** Las dos de Base y la de la Superchain dependían de desplegar en una cadena que ya no usamos, así que dejan de ser opciones y no se sustituyen por nada todavía. `VERIFICAR:` qué programas de subvención o financiación existen en el ecosistema Avalanche, con qué requisitos, montos y plazos. **No tenemos ni un solo dato comprobado sobre ellos**, y hasta tenerlo ninguno se nombra en el pitch ni se planifica sobre su existencia. `VERIFICAR:` también si las dos filas que no dependen de una cadena concreta (la fellowship de la Ethereum Foundation y Gitcoin) exigen despliegue en Ethereum o en un L2, porque si lo exigen también caen.
 
 `VERIFICAR:` montos, plazos y criterios de cada programa cambian con frecuencia. Los de esta tabla corresponden a septiembre de 2026 y deben confirmarse en la fuente oficial antes de citarlos en el pitch.
 

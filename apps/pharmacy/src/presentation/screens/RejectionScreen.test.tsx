@@ -45,7 +45,7 @@ const SAMPLES: { [C in RejectionCode]: Extract<RejectionReason, { code: C }> } =
   'wrong-deployment': {
     code: 'wrong-deployment',
     expectedChainId: CHAIN_ID,
-    actualChainId: 84532,
+    actualChainId: 43113,
     expectedRegistry: REGISTRY_ADDRESS,
     actualRegistry: '0x8888888888888888888888888888888888888888',
   },

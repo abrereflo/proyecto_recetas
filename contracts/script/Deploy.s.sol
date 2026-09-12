@@ -12,10 +12,13 @@ import {LocalDemo} from "./LocalDemo.sol";
 /// Local (Anvil), everything defaulted and a MockEAS deployed for you:
 ///   forge script script/Deploy.s.sol --rpc-url anvil --broadcast
 ///
-/// Base Sepolia, where nothing is defaulted:
-///   EAS_ADDRESS=0x4200000000000000000000000000000000000021 \
+/// Avalanche Fuji, where nothing is defaulted. The EAS address and the two
+/// schema uids come from script/DeployEAS.s.sol and script/RegisterSchemas.s.sol,
+/// which must have run first: Avalanche has no official EAS deployment, so
+/// there is no canonical address to assume here.
+///   EAS_ADDRESS=0x... \
 ///   PRACTITIONER_SCHEMA_UID=0x... PHARMACY_SCHEMA_UID=0x... ISSUER_AUTHORITY=0x... \
-///   forge script script/Deploy.s.sol --rpc-url base_sepolia --broadcast --verify
+///   forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify
 ///
 /// @dev The contract is immutable and has no administrator (D-14). A new
 ///      version means a new deployment and an explicit migration.

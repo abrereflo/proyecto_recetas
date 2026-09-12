@@ -1,6 +1,6 @@
 # Receta electrónica verificable sobre Ethereum — documentación del proyecto
 
-Un médico firma una receta sin saber qué es una wallet y sin pagar gas; la farmacia la verifica escaneando un QR; el segundo intento de dispensar esa misma receta es rechazado por el contrato. Eso es lo que construimos y lo que se demuestra. Corre sobre **Base Sepolia**, un L2 público de Ethereum, con abstracción de cuenta, paymaster y credenciales profesionales emitidas como attestations.
+Un médico firma una receta sin saber qué es una wallet y sin pagar gas; la farmacia la verifica escaneando un QR; el segundo intento de dispensar esa misma receta es rechazado por el contrato. Eso es lo que construimos y lo que se demuestra. Corre sobre **Avalanche Fuji**, la testnet pública de la C-Chain de Avalanche —una L1 EVM independiente, no un L2 de Ethereum—, con abstracción de cuenta, paymaster y credenciales profesionales emitidas como attestations.
 
 > **Contexto: buildathon de Ethereum, Cochabamba (Bolivia).**
 > Tres días de construcción y un pitch con demo de tres minutos. Esta documentación existe para sostener esa demo y ese pitch, no para describir un sistema hipotético completo. Todo lo que no sea construible y demostrable está marcado como fase posterior.
@@ -12,7 +12,7 @@ Un médico firma una receta sin saber qué es una wallet y sin pagar gas; la far
 | Archivo | Qué responde | Audiencia |
 |---|---|---|
 | [00-vision-y-alcance.md](00-vision-y-alcance.md) | Qué problema atacamos, qué entra en el MVP de tres días y qué falta validar | Equipo, jurado |
-| [01-arquitectura.md](01-arquitectura.md) | Cómo se conectan L2, smart accounts, paymaster, EAS y almacenamiento cifrado | Ingeniería |
+| [01-arquitectura.md](01-arquitectura.md) | Cómo se conectan la cadena, smart accounts, paymaster, EAS y almacenamiento cifrado | Ingeniería |
 | [02-roles-y-permisos.md](02-roles-y-permisos.md) | Quién puede hacer qué y cómo se acredita y se revoca a un profesional | Ingeniería, legal |
 | [03-modelo-de-datos.md](03-modelo-de-datos.md) | Qué se escribe on-chain, qué jamás, y cómo se protege la privacidad de metadatos | Ingeniería, privacidad |
 | [04-smart-contracts.md](04-smart-contracts.md) | Contratos, struct EIP-712, máquina de estados y la contradicción de cantidades resuelta | Ingeniería |
@@ -83,7 +83,7 @@ Identificadores únicos en todo el conjunto documental.
 | D-24 | Par de claves de cifrado, separado de la passkey de firma | [05](05-almacenamiento-y-cifrado.md) |
 | D-25 | Procedencia del contexto clínico del paciente | [06](06-validacion-clinica.md) |
 | D-26 | Integración con el software de gestión de farmacia | [09](09-roadmap.md) |
-| D-27 | Desplegar también en Avalanche para el bounty | [15](15-track-y-entrega.md) |
+| D-27 | Presentarse al bounty de Avalanche | [15](15-track-y-entrega.md) |
 | D-28 | Canal real de inscripción y entrega | [15](15-track-y-entrega.md) |
 
 ## Siguiente paso

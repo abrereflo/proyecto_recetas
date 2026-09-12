@@ -12,9 +12,10 @@ import {Attestation, IEAS} from "../../src/IEAS.sol";
 ///
 ///      It is also what `Deploy.s.sol` and `SetupCredentials.s.sol` put behind
 ///      the registry on Anvil (chainId 31337) so the demo runs with no external
-///      dependency. On any public network the registry points at the canonical
-///      EAS deployment instead, and the deploy script refuses to start without
-///      it.
+///      dependency. On a public network the registry points at the real EAS
+///      v1.2.0 this project deploys itself with `DeployEAS.s.sol` — Avalanche
+///      has no official EAS instance — and the deploy script refuses to start
+///      without its address.
 ///
 ///      Two behaviours are copied from the real contract on purpose:
 ///        - an unknown uid returns a ZEROED `Attestation`, it does not revert;

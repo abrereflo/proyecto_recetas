@@ -17,7 +17,7 @@ Este documento hace dos cosas que suelen evitarse. Primero, dice qué ataques **
 | Fuga del almacén off-chain | Todo está cifrado con AES-256-GCM; las claves no están en el mismo almacén | Si se filtran ciphertext y claves a la vez, el contenido queda expuesto |
 | Correlación por metadatos on-chain | Compromiso con sal única por receta; ningún identificador de paciente | **El grafo de transacciones sigue siendo público.** Ver [03, D-06](03-modelo-de-datos.md) |
 | QR fotografiado por un tercero | Un solo uso más caducidad | Quien fotografía el QR puede leer la receta y, si llega antes a una farmacia, dispensarla |
-| Censura o caída del secuenciador del L2 | Los L2 ofrecen vías de inclusión forzada desde L1 | Durante una caída, las farmacias no pueden dispensar en línea. Ver [D-20](04-smart-contracts.md) |
+| Censura o degradación del conjunto de validadores de la C-Chain | Redundancia de proveedores de RPC y reintento de la transacción. Nada más: Avalanche es una L1 propia, no hay secuenciador que sustituir ni vía de inclusión forzada desde otra cadena | **No mitigado a nivel de red.** Si los validadores censuran o la cadena se degrada, las farmacias no pueden dispensar en línea y no tenemos vía de escape verificada. `VERIFICAR:` qué garantías concretas de resistencia a censura y de liveness ofrece la C-Chain. Ver [D-20](04-smart-contracts.md) |
 | Error en el contrato | Superficie mínima, pruebas con Foundry, contrato inmutable | Sin auditoría externa, un fallo no detectado sigue siendo posible |
 
 > **Lo que la blockchain resuelve es la verificabilidad, no la honestidad.** Garantiza que una receta no se use dos veces y que su emisor sea quien dice ser. No convierte a un profesional deshonesto en honesto. Cualquier presentación que sugiera lo contrario es overclaim.
@@ -168,7 +168,7 @@ sequenceDiagram
 |---|---|
 | Ambas firmas cubren el mismo objeto | Las dos firman sobre `contentHash`, que es el keccak256 del documento cifrado |
 | Validez legal en Bolivia | La firma ADSIB, con su certificado, se conserva junto al documento y es oponible ante un tribunal |
-| Verificabilidad pública e inmutabilidad | El `contentHash` está anclado en Base Sepolia y cualquiera comprueba cuándo se registró y quién lo hizo |
+| Verificabilidad pública e inmutabilidad | El `contentHash` está anclado en Avalanche Fuji y cualquiera comprueba cuándo se registró y quién lo hizo |
 | Comprobación por la farmacia | Verifica el hash contra la cadena y, si lo necesita, valida la firma ADSIB contra la cadena de certificación |
 | Sin datos personales en la cadena | La firma ADSIB y el certificado (que contienen el nombre del médico) viven off-chain |
 

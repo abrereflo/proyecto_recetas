@@ -14,13 +14,13 @@ import {
  * The demo keys checked into `config.ts` are the public Anvil accounts: they
  * ship inside every Foundry installation, so on a public network they are not
  * secrets at all. The guard exists because the next step of the project is
- * pointing `CHAIN_ID`/`RPC_URL` at Base Sepolia, and nothing else stops these
+ * pointing `CHAIN_ID`/`RPC_URL` at Avalanche Fuji, and nothing else stops these
  * keys from signing there.
  */
 
 function config(chainId: number): CliConfig {
   return {
-    rpcUrl: chainId === 31337 ? 'http://localhost:8545' : 'https://sepolia.base.org',
+    rpcUrl: chainId === 31337 ? 'http://localhost:8545' : 'https://api.avax-test.network/ext/bc/C/rpc',
     chainId,
     registryAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
     apiUrl: 'http://localhost:3000',
@@ -33,10 +33,10 @@ describe('isLocalChain', () => {
     expect(isLocalChain(1337)).toBe(true);
   });
 
-  it('rejects Base Sepolia and Ethereum mainnet', () => {
-    expect(isLocalChain(84532)).toBe(false);
+  it('rejects Avalanche Fuji and Ethereum mainnet', () => {
+    expect(isLocalChain(43113)).toBe(false);
     expect(isLocalChain(1)).toBe(false);
-    expect(isLocalChain(8453)).toBe(false);
+    expect(isLocalChain(43114)).toBe(false);
   });
 });
 
@@ -45,12 +45,12 @@ describe('doctorAccount', () => {
     expect(doctorAccount(config(31337)).privateKey).toMatch(/^0x[0-9a-f]{64}$/);
   });
 
-  it('refuses to hand out a checked-in key on Base Sepolia', () => {
-    expect(() => doctorAccount(config(84532))).toThrow(/84532/);
+  it('refuses to hand out a checked-in key on Avalanche Fuji', () => {
+    expect(() => doctorAccount(config(43113))).toThrow(/43113/);
   });
 
   it('explains that the key is public rather than just failing', () => {
-    expect(() => doctorAccount(config(84532))).toThrow(/p[úu]blic/i);
+    expect(() => doctorAccount(config(43113))).toThrow(/p[úu]blic/i);
   });
 });
 
@@ -61,7 +61,7 @@ describe('pharmacyAccount', () => {
   });
 
   it('refuses to hand out a checked-in key on a public network', () => {
-    expect(() => pharmacyAccount('a', config(84532))).toThrow(/84532/);
+    expect(() => pharmacyAccount('a', config(43113))).toThrow(/43113/);
     expect(() => pharmacyAccount('b', config(1))).toThrow(/\b1\b/);
   });
 });
@@ -75,9 +75,9 @@ describe('credentialIssuerAccount', () => {
     expect(credentialIssuerAccount(config(31337)).label).toContain('Emisor');
   });
 
-  it('refuses to hand out the authority key on Base Sepolia, naming the network', () => {
-    expect(() => credentialIssuerAccount(config(84532))).toThrow(/84532/);
-    expect(() => credentialIssuerAccount(config(84532))).toThrow(/p[úu]blic/i);
+  it('refuses to hand out the authority key on Avalanche Fuji, naming the network', () => {
+    expect(() => credentialIssuerAccount(config(43113))).toThrow(/43113/);
+    expect(() => credentialIssuerAccount(config(43113))).toThrow(/p[úu]blic/i);
   });
 });
 
@@ -98,9 +98,9 @@ describe('demoHolderAccounts', () => {
     expect(holders.pharmacyB).toEqual(pharmacyAccount('b', config(31337)));
   });
 
-  it('refuses to hand out the demo holders on Base Sepolia, naming the network', () => {
-    expect(() => demoHolderAccounts(config(84532))).toThrow(/84532/);
-    expect(() => demoHolderAccounts(config(84532))).toThrow(/p[úu]blic/i);
+  it('refuses to hand out the demo holders on Avalanche Fuji, naming the network', () => {
+    expect(() => demoHolderAccounts(config(43113))).toThrow(/43113/);
+    expect(() => demoHolderAccounts(config(43113))).toThrow(/p[úu]blic/i);
   });
 });
 
