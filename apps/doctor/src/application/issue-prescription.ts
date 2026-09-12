@@ -2,6 +2,7 @@ import { buildMessage } from '@recetas/chain';
 import {
   bytesToBase64Url,
   generateDek as defaultGenerateDek,
+  generateIv,
   generateSalt as defaultGenerateSalt,
   patientCommitment,
   saltToHex,
@@ -17,7 +18,7 @@ import {
   type QrPayload,
 } from '@recetas/shared';
 import { buildPrescriptionDocument, validateDraft, type PrescriptionDraft } from '../domain/draft';
-import type { IssueResult, IssueStepId } from '../domain/issuance';
+import type { IssueAttempt, IssueResult, IssueStepId } from '../domain/issuance';
 import { ChainUnreachableError, type ChainPort } from '../ports/chain.port';
 import {
   DocumentStoreRejectedError,
@@ -91,6 +92,9 @@ export interface IssuePrescriptionInput {
   draft: PrescriptionDraft;
   /** The account that signs and that the chain will record as `prescriber`. */
   prescriber: Address;
+  /** The attempt to RETRY, surfaced on an unanswered anchor: passing it back
+   * repeats the same `contentHash` instead of issuing a second receta. */
+  attempt?: IssueAttempt;
   /** Progress for screen D5. Called once per completed step, in order. */
   onStep?: (step: IssueStepId) => void;
 }
@@ -103,7 +107,7 @@ export function createIssuePrescription(deps: IssuePrescriptionDeps): IssuePresc
   const generateDek = deps.generateDek ?? defaultGenerateDek;
   const now = deps.now ?? (() => new Date());
 
-  return async ({ draft, prescriber, onStep }) => {
+  return async ({ draft, prescriber, attempt: retried, onStep }) => {
     const step = (id: IssueStepId): void => onStep?.(id);
 
     // --- Form validation. NOT clinical validation: the rules engine is
@@ -118,11 +122,13 @@ export function createIssuePrescription(deps: IssuePrescriptionDeps): IssuePresc
     }
 
     // --- 1. The clinical document. It never leaves this browser in the clear.
-    const salt = generateSalt();
+    const attempt: IssueAttempt =
+      retried ?? { salt: generateSalt(), dek: generateDek(), iv: generateIv(), issuedAt: now() };
+    const { salt } = attempt;
     const { document, issuedAtSeconds, expiresAtSeconds } = buildPrescriptionDocument({
       draft,
       salt,
-      issuedAt: now(),
+      issuedAt: attempt.issuedAt,
     });
     step('document');
 
@@ -133,12 +139,13 @@ export function createIssuePrescription(deps: IssuePrescriptionDeps): IssuePresc
     // --- 3 and 4. Encrypt, then sign the resulting contentHash.
     // The prescriber signs the anchored `contentHash`, so the signature cannot
     // exist before the ciphertext does; `sealDocument` owns that ordering.
-    const dek = generateDek();
+    const { dek } = attempt;
 
     let envelope;
     let contentHash: Bytes32;
     try {
       const sealed = await sealDocument(document, dek, {
+        iv: attempt.iv,
         sign: async (hash): Promise<DocumentSignatures> => {
           step('seal');
 
@@ -185,7 +192,7 @@ export function createIssuePrescription(deps: IssuePrescriptionDeps): IssuePresc
     step('store');
 
     // --- 6. Anchor on chain. Only the commitment, the hash and the expiry.
-    let transactionHash: Hex;
+    let transactionHash: Hex | undefined;
     try {
       const receipt = await chain.issue({
         contentHash,
@@ -200,11 +207,16 @@ export function createIssuePrescription(deps: IssuePrescriptionDeps): IssuePresc
       // The contract is the authority on why. `AlreadyIssued` carries the hash,
       // `NotAccreditedPractitioner` the account, `InvalidExpiry` the instant.
       const rejection = decodeIssueRejection(error);
-      if (rejection !== undefined) return { outcome: 'rejected', reason: rejection };
+      // `AlreadyIssued` for the hash of the attempt BEING RETRIED is the
+      // contract confirming the unobserved broadcast landed: rebuild the QR.
+      const recovered =
+        rejection?.code === 'already-issued' && retried?.contentHash === rejection.contentHash;
+      if (rejection !== undefined && !recovered) return { outcome: 'rejected', reason: rejection };
 
       if (error instanceof ChainUnreachableError) {
         return {
           outcome: 'rejected',
+          attempt: { ...attempt, contentHash },
           reason: {
             code: 'network-error',
             message: 'No hay respuesta de la cadena, así que la receta no quedó registrada.',
@@ -214,7 +226,7 @@ export function createIssuePrescription(deps: IssuePrescriptionDeps): IssuePresc
 
       // An error nobody modelled must not be dressed up as a verdict for the
       // consulting room (docs/17: never a generic "operación fallida").
-      throw error;
+      if (!recovered) throw error;
     }
     step('anchor');
 

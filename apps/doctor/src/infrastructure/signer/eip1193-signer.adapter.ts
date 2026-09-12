@@ -43,7 +43,7 @@ export interface Eip1193Provider {
 }
 
 /** Error code EIP-1193 reserves for "the user said no". */
-const USER_REJECTED = 4001;
+export const USER_REJECTED = 4001;
 /** Error code EIP-3085/1193 returns when the chain is not known to the provider. */
 const UNRECOGNISED_CHAIN = 4902;
 
@@ -57,7 +57,7 @@ export function injectedProvider(): Eip1193Provider | undefined {
   return typeof globalThis.window === 'undefined' ? undefined : globalThis.window.ethereum;
 }
 
-function errorCode(error: unknown): number | undefined {
+export function errorCode(error: unknown): number | undefined {
   if (typeof error !== 'object' || error === null) return undefined;
   const code = (error as { code?: unknown }).code;
   if (typeof code === 'number') return code;

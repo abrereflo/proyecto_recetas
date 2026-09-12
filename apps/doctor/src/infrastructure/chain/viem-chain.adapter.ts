@@ -21,7 +21,13 @@ import {
   type IssueRequest,
 } from '../../ports/chain.port';
 import type { DoctorConfig } from '../config/env';
-import { injectedProvider, type Eip1193Provider } from '../signer/eip1193-signer.adapter';
+import { SignerRejectedError } from '../../ports/signer.port';
+import {
+  USER_REJECTED,
+  errorCode,
+  injectedProvider,
+  type Eip1193Provider,
+} from '../signer/eip1193-signer.adapter';
 
 /**
  * `ChainPort` over viem.
@@ -83,7 +89,7 @@ export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainP
     }
   }
 
-  return {
+  const port: ChainPort = {
     async blockTimestamp() {
       return guarded(async () => {
         const block = await publicClient.getBlock({ blockTag: 'latest' });
@@ -190,7 +196,9 @@ export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainP
         account: request.prescriber as ViemAddress,
       } as never);
 
-      const transactionHash = await walletClient.writeContract(simulated as never);
+      const transactionHash = await walletClient
+        .writeContract(simulated as never)
+        .catch(asPrescriberDecision);
       const receipt = await publicClient.waitForTransactionReceipt({ hash: transactionHash });
       const block = await publicClient.getBlock({ blockNumber: receipt.blockNumber });
 
@@ -201,6 +209,16 @@ export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainP
       };
     },
   };
+
+  // `issue` is guarded exactly like the reads (R4-001): a transport failure
+  // mid-anchor must arrive as `ChainUnreachableError`, never as a verdict.
+  return { ...port, issue: (request) => guarded(() => port.issue(request)) };
+}
+
+/** Declining the transaction prompt is a decision, not a network fault. */
+export function asPrescriberDecision(error: unknown): never {
+  if (errorCode(error) === USER_REJECTED) throw new SignerRejectedError({ cause: error });
+  throw error;
 }
 
 function isTransportFailure(error: unknown): boolean {
@@ -210,6 +228,8 @@ function isTransportFailure(error: unknown): boolean {
     name === 'HttpRequestError' ||
     name === 'TimeoutError' ||
     name === 'SocketClosedError' ||
+    // The broadcast landed but the receipt never arrived: the case R4-001 is about.
+    name === 'WaitForTransactionReceiptTimeoutError' ||
     name === 'TypeError'
   );
 }

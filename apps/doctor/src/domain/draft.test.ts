@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { saltToHex } from '@recetas/crypto';
+import { prescriptionDocumentSchema } from '@recetas/shared';
 import { ISSUED_AT_DATE, SALT_BYTES, aDraft, anItem } from '../test/fixtures';
 import {
   DEFAULT_VALIDITY_DAYS,
@@ -123,6 +124,26 @@ describe('form validation', () => {
 });
 
 describe('the assembled document', () => {
+
+  /** R1-001: D4's promise holds only if the motive reaches the sealed document,
+   * and the field must stay optional for documents that predate it. */
+  it('carries the critical-alert motive, and stays valid without one', () => {
+    const written = {
+      alertId: 'DECLARED_ALLERGY:J01CA04',
+      code: 'DECLARED_ALLERGY' as const,
+      severity: 'critical' as const,
+      text: 'Alergia leve documentada; el beneficio supera el riesgo.',
+      recordedAt: '2026-09-11T13:40:00.000Z',
+    };
+    const build = (draft = aDraft()) =>
+      buildPrescriptionDocument({ draft, salt: SALT_BYTES, issuedAt: ISSUED_AT_DATE }).document;
+    const { alertId: _internal, ...motive } = written;
+
+    expect(build(aDraft({ justifications: [written] })).justifications).toEqual([motive]);
+    expect(build().justifications).toBeUndefined();
+    expect(prescriptionDocumentSchema.safeParse(build()).success).toBe(true);
+  });
+
   it('carries the salt and the patient identifier, and nothing else does', () => {
     const { document, issuedAtSeconds, expiresAtSeconds } = buildPrescriptionDocument({
       draft: aDraft(),

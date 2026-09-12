@@ -93,7 +93,7 @@ export function IssuedScreen({
           <dt>Huella del contenido</dt>
           <dd className="mono">{result.contentHash}</dd>
           <dt>Transacción</dt>
-          <dd className="mono">{result.transactionHash}</dd>
+          <dd className="mono">{result.transactionHash ?? 'Registrada en un intento previo'}</dd>
           <dt>Caduca</dt>
           <dd>{formatDay(result.expiresAt)}</dd>
           <dt>Red</dt>

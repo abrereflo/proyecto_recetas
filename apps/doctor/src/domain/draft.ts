@@ -235,6 +235,12 @@ export function buildPrescriptionDocument(input: BuildDocumentInput): BuiltDocum
     expiresAt: secondsToIso(expiresAtSeconds),
   };
 
+  // D4's promise, kept: the motive is retained WITH the receta, inside the
+  // envelope encrypted below. It reaches no signature, no `issue()` argument
+  // and no QR — only `alertId`, an internal handle, is dropped.
+  const motives = draft.justifications.map(({ alertId: _internal, ...motive }) => motive);
+  if (motives.length > 0) document.justifications = motives;
+
   // Validate against the shared schema, but keep the branded literal types.
   prescriptionDocumentSchema.parse(document);
 

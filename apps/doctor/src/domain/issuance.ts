@@ -97,6 +97,23 @@ export type IssueRejection =
 /** Narrows the union to the member carrying a given code. */
 export type IssueRejectionOf<C extends IssueRejectionCode> = Extract<IssueRejection, { code: C }>;
 
+/**
+ * The random material of ONE issuing attempt, reusable on a retry.
+ *
+ * Regenerating it makes a retry a DIFFERENT receta: `contentHash` changes,
+ * `AlreadyIssued` can never fire, and a first anchor that was in fact mined is
+ * stranded with no QR and no key. The same attempt repeats the same hash — `iv`
+ * included, since that hash is keccak256 of the CIPHERTEXT.
+ */
+export interface IssueAttempt {
+  salt: Uint8Array;
+  dek: Uint8Array;
+  iv: Uint8Array;
+  issuedAt: Date;
+  /** The hash this attempt sealed. Known once it reached the anchor. */
+  contentHash?: Bytes32;
+}
+
 /** Outcome of one issuing attempt. */
 export type IssueResult =
   | {
@@ -105,11 +122,12 @@ export type IssueResult =
       qr: string;
       qrPayload: QrPayload;
       contentHash: Bytes32;
-      transactionHash: Hex;
+      /** Absent when the anchor was recovered from an earlier broadcast. */
+      transactionHash?: Hex;
       /** Unix seconds, midnight of the expiry day (D-13). */
       expiresAt: bigint;
     }
-  | { outcome: 'rejected'; reason: IssueRejection }
+  | { outcome: 'rejected'; reason: IssueRejection; attempt?: IssueAttempt }
   /** The prescriber declined the signature. A decision, not a failure. */
   | { outcome: 'aborted' };
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { Address } from '@recetas/shared';
 import type { PrescriptionDraft } from '../domain/draft';
-import type { IssueResult } from '../domain/issuance';
+import type { IssueAttempt, IssueResult } from '../domain/issuance';
 import type { DoctorServices } from './composition/doctor-services';
 import { CriticalAlertDialog } from './screens/CriticalAlertDialog';
 import { AccessScreen } from './screens/AccessScreen';
@@ -53,6 +53,9 @@ export function DoctorApp({ services, now = () => new Date() }: DoctorAppProps) 
   const [draft, setDraft] = useState<PrescriptionDraft>(emptyDraft);
   const [account, setAccount] = useState<Address | null>(null);
   const mounted = useRef(true);
+  /** Retained so a retry reuses it and `AlreadyIssued` identifies an anchor
+   * that landed unobserved (R4-001). */
+  const attempt = useRef<IssueAttempt | undefined>(undefined);
 
   useEffect(() => {
     mounted.current = true;
@@ -77,12 +80,15 @@ export function DoctorApp({ services, now = () => new Date() }: DoctorAppProps) 
         issue({
           draft,
           prescriber: account,
+          attempt: attempt.current,
           onStep: (step) => {
             if (!cancelled && mounted.current) dispatch({ type: 'issueStepCompleted', step });
           },
         }),
       );
       if (cancelled || !mounted.current) return;
+      if (result.outcome === 'rejected') attempt.current = result.attempt ?? attempt.current;
+      else attempt.current = undefined;
 
       switch (result.outcome) {
         case 'issued':
@@ -120,6 +126,7 @@ export function DoctorApp({ services, now = () => new Date() }: DoctorAppProps) 
    * is the other half of the same rule.
    */
   const onNewPrescription = useCallback(() => {
+    attempt.current = undefined;
     setDraft(emptyDraft());
     dispatch({ type: 'startNewPrescription' });
   }, []);

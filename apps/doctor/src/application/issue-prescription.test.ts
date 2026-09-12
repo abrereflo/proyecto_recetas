@@ -370,6 +370,32 @@ describe('when the off-chain store fails', () => {
  * prescription, so nothing can be dispensed against it.
  */
 describe('when the contract refuses the issuance', () => {
+
+  /** R4-001. The anchor is broadcast, the RPC drops before the receipt, and a
+   * retry that regenerates the material produces a DIFFERENT hash: nothing ever
+   * fires `AlreadyIssued`, a second receta anchors, and the first is stranded
+   * with no QR and no key. Retrying the SAME attempt is the repair. */
+  it('recovers, rather than burns, a retried attempt whose anchor landed', async () => {
+    let anchors = 0;
+    const { issue } = harness({
+      issue: async (request) => {
+        anchors += 1;
+        if (anchors === 1) throw new ChainUnreachableError(CONFIG.rpcUrl);
+        throw revert('AlreadyIssued', [request.contentHash]);
+      },
+    });
+
+    const first = await issue({ draft: aDraft(), prescriber: PRESCRIBER });
+    if (first.outcome !== 'rejected') throw new Error('expected the first anchor to fail');
+    const retry = await issue({ draft: aDraft(), prescriber: PRESCRIBER, attempt: first.attempt });
+
+    expect(retry.outcome).toBe('issued');
+    if (retry.outcome !== 'issued') return;
+    expect(retry.contentHash).toBe(first.attempt?.contentHash);
+    // The QR carries the RETAINED key, so the recovered code still decrypts.
+    expect(decodeQrPayload(retry.qr).key).toBe(bytesToBase64Url(DEK_BYTES));
+  });
+
   it('maps AlreadyIssued onto its own reason, with the contentHash', async () => {
     const { issue, recorder } = harness({
       issue: async (request) => {
@@ -425,7 +451,7 @@ describe('when the contract refuses the issuance', () => {
 
     const result = await issue({ draft: aDraft(), prescriber: PRESCRIBER });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       outcome: 'rejected',
       reason: {
         code: 'network-error',
