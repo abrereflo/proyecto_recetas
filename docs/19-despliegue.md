@@ -41,6 +41,26 @@ forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify
 
 Tras desplegar, confirmar que `EAS.version()` y `SchemaRegistry.version()` devuelven `1.2.0`, y que `EAS.getSchemaRegistry()` apunta al registro desplegado junto a ella. Es la comprobación barata de que lo desplegado es lo esperado.
 
+### Si el RPC se cae a mitad del despliegue
+
+**Foundry no reintenta el envío, y no hay ninguna opción que lo active.** Conviene decirlo explícitamente porque los dos flags que lo parecen no lo son: `--retries` y `--delay` gobiernan los reintentos del *verificador* de código fuente en el explorador —cinco intentos por defecto— y no tocan el broadcast. Un RPC público que deja de responder a mitad de `forge script` corta el despliegue ahí.
+
+Lo que sí existe son estas tres piezas, y son las que hay que usar:
+
+| Pieza | Qué hace |
+|---|---|
+| `--resume` | Reenvía las transacciones que quedaron pendientes o caídas del último intento. **No vuelve a simular el script** y da por hecho que los nonces no cambiaron |
+| `--rpc-timeout <segundos>` | Corta la espera de una petición RPC en vez de colgarse sin límite. También `ETH_RPC_TIMEOUT` |
+| `--timeout <segundos>` | Lo mismo para la espera del broadcast. También `ETH_TIMEOUT` |
+
+El procedimiento ante un corte es reejecutar el **mismo** comando con `--resume` añadido:
+
+```bash
+forge script script/DeployEAS.s.sol --rpc-url fuji --broadcast --resume
+```
+
+> **No se relanza un despliegue a medias sin `--resume`.** Sin él, el script se simula de cero y vuelve a enviar transacciones que quizá ya se minaron: en `DeployEAS.s.sol` eso significa un `SchemaRegistry` y un `EAS` duplicados, y una dirección anotada en el entorno que no es la que quedó viva. Y como `--resume` exige que los nonces sigan como estaban, esa cuenta de despliegue no se usa para nada más mientras haya un despliegue sin terminar.
+
 ### Verificación de contratos en el explorador
 
 El explorador de Fuji es `https://testnet.snowtrace.io`. **Avalanche Fuji es de tier pago en Etherscan V2**, así que la key gratuita de Etherscan no verifica aquí. `contracts/foundry.toml` apunta la verificación a **Routescan**, que expone una API compatible con Etherscan y acepta la cadena literal `verifyContract` como key:

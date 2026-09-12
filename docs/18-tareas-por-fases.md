@@ -20,9 +20,12 @@ Prerequisito de todo lo demás. **No es progreso hacia la demo**: que Docker lev
 - [x] `docker compose up -d` levanta Postgres y Anvil
 - [x] `env.example` con `DATABASE_URL`, `RPC_URL`, `FUJI_RPC_URL`
 - [ ] Obtener AVAX de testnet de Fuji en la cuenta de despliegue
-- [ ] Confirmar acceso al RPC público de Fuji (`https://api.avax-test.network/ext/bc/C/rpc`) con reintentos con backoff
+- [x] Acceso al RPC público de Fuji (`https://api.avax-test.network/ext/bc/C/rpc`) comprobado el 12/09/2026: `eth_chainId` devuelve `0xa869`, que es 43113, y `eth_blockNumber`, `0x37a2d0b`
+- [x] Recuperación ante un RPC que se cae a mitad del despliegue, documentada en [19](19-despliegue.md): Foundry no reintenta el broadcast, se reenvía con `--resume`
 
-> Regla general, no medición: ningún RPC público es fiable al cien por cien, y todo script de despliegue debe reintentar con backoff, porque un fallo aislado no es evidencia de que algo esté roto. La disponibilidad del RPC de Fuji **no se ha medido**; lo que se midió en [16](16-plan-de-ejecucion.md) fue otra red y ese dato no se traslada.
+> Ningún RPC público es fiable al cien por cien, pero **Foundry no hace backoff en el broadcast y no hay flag que lo active**: `--retries` y `--delay` son reintentos del *verificador* de código fuente en el explorador, con cinco intentos por defecto, y no tocan el envío de la transacción. Lo que sí existe es `--resume`, que reenvía las transacciones que quedaron pendientes o caídas sin volver a simular el script, y `--rpc-timeout`, que impide que la espera se cuelgue sin límite. El procedimiento está en [19](19-despliegue.md).
+>
+> La comprobación del 12/09/2026 dice que el RPC responde, no que sea fiable: la disponibilidad sostenida **no se ha medido**, y lo que se midió en [16](16-plan-de-ejecucion.md) fue otra red y ese dato no se traslada.
 
 **Criterio de salida:** `docker compose up -d` levanta la infraestructura y `pnpm install` termina sin errores.
 
