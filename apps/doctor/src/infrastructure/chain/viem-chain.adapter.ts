@@ -1,8 +1,10 @@
 import {
   BaseError,
+  ChainDisconnectedError,
   ContractFunctionExecutionError,
   ContractFunctionRevertedError,
   ContractFunctionZeroDataError,
+  ProviderDisconnectedError,
   ProviderRpcError,
   RpcError,
   createWalletClient,
@@ -247,11 +249,25 @@ const EXECUTION_REVERTED = 3;
  *
  * The one class that says NOTHING about which of the two it is —
  * `ContractFunctionExecutionError` — is decided by `answeredWithRevert`.
+ *
+ * `ProviderRpcError` is exempted because a provider DECISION arrives as one,
+ * but not every subclass is a decision: EIP-1193 reserves 4900 and 4901 for the
+ * provider reporting that it is not connected, and viem models both as
+ * `ProviderRpcError` subclasses. They are classified first, below.
  */
 function isTransportFailure(error: unknown): boolean {
   // A bare `fetch` failure never becomes a viem error.
   if (error instanceof TypeError) return true;
   if (!(error instanceof BaseError)) return false;
+  // EIP-1193 4900/4901, BEFORE the `ProviderRpcError` exemption they both
+  // inherit from: a wallet reporting "disconnected" right after the broadcast
+  // is lost transport, not an answer. Exempted, it reaches the pipeline
+  // unmodelled, matches no branch and is rethrown, so the screen reports a
+  // generic failure with NO attempt attached — and the anchor that may already
+  // be mined can never be recovered (R4-002).
+  if (error instanceof ProviderDisconnectedError) return true;
+  if (error instanceof ChainDisconnectedError) return true;
+  // Everything else in the family is the provider ANSWERING, `UserRejectedRequestError` above all.
   if (error instanceof ProviderRpcError) return false;
   // NEVER exempt this class by TYPE (see `answeredWithRevert`).
   if (error instanceof ContractFunctionExecutionError) return !answeredWithRevert(error);

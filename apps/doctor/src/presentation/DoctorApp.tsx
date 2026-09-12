@@ -53,8 +53,25 @@ export function DoctorApp({ services, now = () => new Date() }: DoctorAppProps) 
   const [draft, setDraft] = useState<PrescriptionDraft>(emptyDraft);
   const [account, setAccount] = useState<Address | null>(null);
   const mounted = useRef(true);
-  /** Retained so a retry reuses it and `AlreadyIssued` identifies an anchor
-   * that landed unobserved (R4-001). */
+  /**
+   * The material of the attempt in flight, retained across a refusal.
+   *
+   * Handing it back on the retry is what lets `AlreadyIssued` identify an anchor
+   * that was broadcast and never observed, so the QR of the receta that really
+   * landed is rebuilt instead of a second, unrelated one being anchored (R4-001).
+   *
+   * IT MUST SURVIVE `resumeEditing`. That action is the ONLY way out of
+   * `'rejected'` into a state that can issue again, so clearing it there
+   * silently disables the entire recovery: every retry would seal fresh
+   * material, produce a different `contentHash`, never reach `AlreadyIssued`,
+   * and strand the first anchor with no QR and an unrecoverable key.
+   *
+   * Clearing it is NOT what prevents an AES-GCM nonce reuse either. The pipeline
+   * rebuilds the document from the retained `salt` and `issuedAt`, fingerprints
+   * it, and reuses `dek`/`iv` only when that fingerprint matches byte for byte
+   * (application/issue-prescription.ts, R1-001). Any edit regenerates everything
+   * on its own, which is why the protection cannot be lost by keeping this.
+   */
   const attempt = useRef<IssueAttempt | undefined>(undefined);
 
   useEffect(() => {
@@ -131,20 +148,12 @@ export function DoctorApp({ services, now = () => new Date() }: DoctorAppProps) 
     dispatch({ type: 'startNewPrescription' });
   }, []);
 
-  /** Defence in depth (R1-001): the retained material is bound to the document
-   * it sealed, and any return to the form invalidates it. The pipeline re-derives
-   * that from the document itself; this simply never carries it across an edit. */
-  const screenDispatch = useCallback((action: FlowAction) => {
-    if (action.type === 'resumeEditing') attempt.current = undefined;
-    dispatch(action);
-  }, []);
-
   return renderScreen(state, {
     services,
     draft,
     account,
     now,
-    dispatch: screenDispatch,
+    dispatch,
     setDraft,
     onAccredited,
     onNewPrescription,

@@ -1,10 +1,14 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { encodeErrorResult } from 'viem';
+import { prescriptionRegistryAbi } from '@recetas/chain';
 import type { CheckCredential } from '../application/check-credential';
-import type { IssuePrescription } from '../application/issue-prescription';
+import { createIssuePrescription, type IssuePrescription } from '../application/issue-prescription';
 import type { ListPrescriptions } from '../application/list-prescriptions';
-import { ISSUE_STEPS } from '../domain/issuance';
+import { ISSUE_STEPS, type IssueResult } from '../domain/issuance';
+import { ChainUnreachableError, type ChainPort, type IssuedPrescriptionLog } from '../ports/chain.port';
+import type { DocumentPort } from '../ports/document.port';
 import type { SignerPort } from '../ports/signer.port';
 import {
   BLOCK_TIME,
@@ -17,6 +21,7 @@ import {
   PRESCRIBER,
   REGISTRY_ADDRESS,
   TRANSACTION_HASH,
+  aRecord,
 } from '../test/fixtures';
 import type { DoctorServices } from './composition/doctor-services';
 import { DoctorApp } from './DoctorApp';
@@ -350,5 +355,98 @@ describe('an unmodelled failure is never a verdict about the receta', () => {
 
     expect(screen.getByRole('heading', { name: /^medicación$/i })).toBeVisible();
     expect(control('item-0-ingredient')).toHaveValue('ibuprofeno');
+  });
+});
+
+/**
+ * R4-002: the recovery of an anchor that was broadcast and never observed only
+ * exists if the UI hands the attempt back.
+ *
+ * The RPC drops after the broadcast, so nobody knows whether the transaction
+ * landed. The pipeline attaches the attempt to the refusal for exactly that
+ * case, and "Volver a la receta" is the ONLY control on that screen that leads
+ * anywhere the doctor can issue from again. If that exit drops the attempt, the
+ * retry seals fresh material, hashes to a different `contentHash`, never reaches
+ * `AlreadyIssued`, and anchors a SECOND receta — while the first stays mined
+ * with no QR and a key that died with the closure, and the screen reports
+ * success.
+ *
+ * issue-prescription.test.ts covers the pipeline GIVEN the attempt. This covers
+ * the only thing that can give it: the screens.
+ */
+describe('an anchor nobody saw land is recoverable from the refusal screen', () => {
+  /** Broadcasts once and drops; from then on the contract answers `AlreadyIssued`. */
+  function aChainThatLosesTheReceipt(): ChainPort {
+    let anchors = 0;
+
+    return {
+      blockTimestamp: async () => BLOCK_TIME,
+      credentialOf: async () => CREDENTIAL_UID,
+      getPrescription: async () => aRecord(),
+      issuedBy: async (): Promise<IssuedPrescriptionLog[]> => [],
+      issue: async (request) => {
+        anchors += 1;
+        if (anchors === 1) throw new ChainUnreachableError(CONFIG.rpcUrl);
+        throw {
+          data: encodeErrorResult({
+            abi: prescriptionRegistryAbi,
+            errorName: 'AlreadyIssued',
+            args: [request.contentHash],
+          }),
+        };
+      },
+    };
+  }
+
+  const aStore = (): DocumentPort => ({
+    storeEnvelope: async () => ({ pointer: POINTER, createdAt: '2026-09-11T13:41:00.000Z' }),
+  });
+
+  it('retries the SAME attempt after the doctor returns to the form, and rebuilds the QR', async () => {
+    const signer = aSigner();
+    // The REAL pipeline, so `AlreadyIssued` is decoded rather than described.
+    const pipeline = createIssuePrescription({
+      chain: aChainThatLosesTheReceipt(),
+      documents: aStore(),
+      signer,
+      config: CONFIG,
+    });
+    const results: IssueResult[] = [];
+    const issue: IssuePrescription = vi.fn(async (input) => {
+      const result = await pipeline(input);
+      results.push(result);
+      return result;
+    });
+    const { user } = renderApp({ issue, signer });
+
+    await enterForm(user);
+    await fillPatient(user);
+    await fillMedication(user);
+    await user.click(screen.getByRole('button', { name: /revisar y firmar/i }));
+    await user.click(screen.getByRole('button', { name: /firmar y emitir/i }));
+    await screen.findByRole('heading', { name: /emisión incompleta/i });
+
+    // The only control on that screen that leads back to an issuable state.
+    await user.click(screen.getByRole('button', { name: /volver a la receta/i }));
+    // NOTHING is edited: the same document, so the same material stays valid.
+    await user.click(screen.getByRole('button', { name: /revisar y firmar/i }));
+    await user.click(screen.getByRole('button', { name: /firmar y emitir/i }));
+
+    expect(await screen.findByRole('heading', { name: /receta emitida/i })).toBeVisible();
+
+    const refused = results[0];
+    if (refused?.outcome !== 'rejected') throw new Error('expected the first anchor to be refused');
+    expect(refused.attempt).toBeDefined();
+
+    // The attempt the pipeline surfaced is the very object the retry received.
+    expect(vi.mocked(issue).mock.calls[0]?.[0].attempt).toBeUndefined();
+    expect(vi.mocked(issue).mock.calls[1]?.[0].attempt).toBe(refused.attempt);
+
+    const recovered = results[1];
+    if (recovered?.outcome !== 'issued') throw new Error('expected the retry to be recovered');
+    expect(recovered.contentHash).toBe(refused.attempt?.contentHash);
+    // Recovered, not re-anchored: there is no transaction of our own to show.
+    expect(recovered.transactionHash).toBeUndefined();
+    expect(screen.getByText(/registrada en un intento previo/i)).toBeVisible();
   });
 });

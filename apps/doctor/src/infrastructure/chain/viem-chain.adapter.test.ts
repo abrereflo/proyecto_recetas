@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   CallExecutionError,
+  ChainDisconnectedError,
   HttpRequestError,
   LimitExceededRpcError,
+  ProviderDisconnectedError,
   RawContractError,
   RpcRequestError,
+  UserRejectedRequestError,
   encodeErrorResult,
   getContractError,
 } from 'viem';
@@ -56,6 +59,42 @@ describe('anchoring a prescription', () => {
 
   it('reports a declined transaction prompt as a decision, not a network fault', () => {
     expect(() => asPrescriberDecision({ code: 4001 })).toThrow(SignerRejectedError);
+  });
+});
+
+/**
+ * The `ProviderRpcError` exemption exists for ONE thing: a provider decision.
+ * EIP-1193 4900/4901 are not decisions — they are the wallet saying it is not
+ * connected — and viem models both as subclasses of that same exempted class.
+ * Left exempted, a mobile wallet dropping right after the broadcast reaches the
+ * pipeline unmodelled, so the screen reports a generic failure carrying NO
+ * attempt and the anchor that may already be mined can never be recovered.
+ */
+describe('a provider that reports itself disconnected', () => {
+  const rejectingSimulation = (error: unknown) => ({ simulateContract: () => Promise.reject(error) });
+
+  it('classifies a disconnected provider as an unreachable node', async () => {
+    const disconnected = new ProviderDisconnectedError(new Error('all chains lost'));
+    await expect(anchorWith(rejectingSimulation(disconnected))).rejects.toBeInstanceOf(
+      ChainUnreachableError,
+    );
+  });
+
+  it('classifies a disconnected chain as an unreachable node', async () => {
+    const disconnected = new ChainDisconnectedError(new Error('requested chain lost'));
+    await expect(anchorWith(rejectingSimulation(disconnected))).rejects.toBeInstanceOf(
+      ChainUnreachableError,
+    );
+  });
+
+  /** The positive control: the exemption still has to hold for the decision it
+   * was written for, or declining the prompt becomes a network fault. */
+  it('still reports a declined request as a decision, never as lost transport', async () => {
+    const declined = new UserRejectedRequestError(new Error('user rejected'));
+    const error = await anchorWith(rejectingSimulation(declined)).catch((rejected: unknown) => rejected);
+
+    expect(error).not.toBeInstanceOf(ChainUnreachableError);
+    expect(error).toBeInstanceOf(UserRejectedRequestError);
   });
 });
 
