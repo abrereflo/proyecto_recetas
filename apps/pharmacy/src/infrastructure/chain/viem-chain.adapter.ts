@@ -1,21 +1,24 @@
 import {
   createWalletClient,
   custom,
-  verifyTypedData,
   type Address as ViemAddress,
   type Hex as ViemHex,
   type PublicClient,
 } from 'viem';
 import {
-  PRESCRIPTION_EIP712_TYPES,
-  PRESCRIPTION_PRIMARY_TYPE,
   PrescriptionStatus,
-  prescriptionDomain,
   type Address,
   type Bytes32,
   type PrescriptionRecord,
   type VerificationResult,
 } from '@recetas/shared';
+import {
+  buildChain,
+  buildMessage,
+  buildPublicClient,
+  prescriptionRegistryAbi,
+  verifyPrescriptionSignature,
+} from '@recetas/chain';
 import {
   ChainUnreachableError,
   type ChainPort,
@@ -27,8 +30,6 @@ import type {
 } from '../../ports/signer.port';
 import type { PharmacyConfig } from '../config/env';
 import { injectedProvider, type Eip1193Provider } from '../signer/eip1193-signer.adapter';
-import { prescriptionRegistryAbi } from './registry-abi';
-import { buildChain, buildPublicClient } from './viem-chain';
 
 /**
  * `ChainPort` over viem.
@@ -49,9 +50,6 @@ export interface ViemChainAdapterOptions {
   /** Resolved lazily so a provider injected after load is still picked up. */
   getProvider?: () => Eip1193Provider | undefined;
 }
-
-/** The `MVP_NONCE` of apps/cli: the registry tracks no per-prescriber nonce yet. */
-const MVP_NONCE = 0n;
 
 export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainPort {
   const { config } = options;
@@ -170,9 +168,10 @@ export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainP
 /**
  * `PrescriberSignatureVerifier` over viem's offline EIP-712 recovery.
  *
- * No network call is involved for an EOA signature. The domain and the type
- * definition come from @recetas/shared so the CLI, the doctor SPA and this PWA
- * verify exactly the structure the prescriber signed.
+ * No network call is involved for an EOA signature. The domain, the type
+ * definition and the MVP nonce come from @recetas/chain over @recetas/shared,
+ * so the CLI, the doctor SPA and this PWA verify exactly the structure the
+ * prescriber signed.
  *
  * TODO (docs/01): once prescribers move to ERC-4337 smart accounts this needs
  * the ERC-1271 `isValidSignature` path, which does require the public client.
@@ -180,29 +179,22 @@ export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainP
 export function createPrescriberSignatureVerifier(
   config: PharmacyConfig,
 ): PrescriberSignatureVerifier {
-  const domain = prescriptionDomain(config.registryAddress, config.chainId);
-
   return {
     async verify(input: PrescriberSignatureInput): Promise<boolean> {
       try {
-        return await verifyTypedData({
-          address: input.prescriber as ViemAddress,
-          domain: {
-            name: domain.name,
-            version: domain.version,
-            chainId: domain.chainId,
-            verifyingContract: config.registryAddress as ViemAddress,
+        return await verifyPrescriptionSignature({
+          deployment: {
+            chainId: config.chainId,
+            registryAddress: config.registryAddress as ViemAddress,
           },
-          types: PRESCRIPTION_EIP712_TYPES,
-          primaryType: PRESCRIPTION_PRIMARY_TYPE,
-          message: {
+          signer: input.prescriber as ViemAddress,
+          message: buildMessage({
             contentHash: input.contentHash as ViemHex,
             patientCommitment: input.patientCommitment as ViemHex,
             prescriber: input.prescriber as ViemAddress,
             issuedAt: input.issuedAt,
             expiresAt: input.expiresAt,
-            nonce: MVP_NONCE,
-          },
+          }),
           signature: input.signature as ViemHex,
         });
       } catch {

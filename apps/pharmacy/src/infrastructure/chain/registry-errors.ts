@@ -1,7 +1,5 @@
-import { BaseError, ContractFunctionRevertedError, decodeErrorResult, type Hex } from 'viem';
-import type { Address } from '@recetas/shared';
+import { decodeRegistryError, toRegistryRevert, type RegistryRevert } from '@recetas/chain';
 import type { RejectionReason } from '../../domain/rejection';
-import { prescriptionRegistryAbi } from './registry-abi';
 
 /**
  * Translation of `PrescriptionRegistry`'s custom errors into domain rejection
@@ -12,35 +10,29 @@ import { prescriptionRegistryAbi } from './registry-abi';
  * domain/rejection.ts; this file only produces the machine-readable reason and
  * the evidence it carries.
  *
+ * The decoding itself — the `BaseError` walk, the cause-chain recursion over
+ * raw revert data and the defensive argument readers — moved to @recetas/chain,
+ * where apps/cli and the doctor app share it (review finding read-002, lineage
+ * review-fbc6fee420beae2b). What stays here is the only part that is the
+ * pharmacy's own: which reverts are a verdict for the counter, and what the
+ * counter calls them.
+ *
  * Errors that cannot happen to a pharmacy (`AlreadyIssued`, `NotPrescriber`,
  * the credential-registration family) deliberately return `undefined` so the
  * caller rethrows instead of inventing a verdict for the counter.
  */
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Address;
+/** Maps one decoded registry revert onto its rejection reason. */
+function rejectionFor(revert: RegistryRevert | undefined): RejectionReason | undefined {
+  if (revert === undefined) return undefined;
 
-function addressArg(args: readonly unknown[] | undefined, index: number): Address {
-  const value = args?.[index];
-  return typeof value === 'string' ? (value as Address) : ZERO_ADDRESS;
-}
-
-function timestampArg(args: readonly unknown[] | undefined, index: number): bigint {
-  const value = args?.[index];
-  return typeof value === 'bigint' ? value : 0n;
-}
-
-/** Maps one decoded custom error onto its rejection reason. */
-export function rejectionForError(
-  errorName: string,
-  args: readonly unknown[] | undefined,
-): RejectionReason | undefined {
-  switch (errorName) {
+  switch (revert.name) {
     // P6. `dispensedBy` and `dispensedAt` are the whole point of this error.
     case 'AlreadyDispensed':
       return {
         code: 'already-dispensed',
-        dispensedBy: addressArg(args, 1),
-        dispensedAt: timestampArg(args, 2),
+        dispensedBy: revert.dispensedBy,
+        dispensedAt: revert.dispensedAt,
       };
 
     // The clock/block race fallback: expiry is normally derived client-side
@@ -48,7 +40,7 @@ export function rejectionForError(
     // between the read and the write, the contract says so and both paths land
     // on the same reason (docs/04, docs/17).
     case 'PrescriptionExpired':
-      return { code: 'expired', expiresAt: timestampArg(args, 1) };
+      return { code: 'expired', expiresAt: revert.expiresAt };
 
     case 'PrescriptionCancelledError':
       return { code: 'cancelled' };
@@ -59,50 +51,22 @@ export function rejectionForError(
     // The registry re-reads the EAS attestation on every `dispense`, so a
     // credential revoked after registration cuts access on the next call.
     case 'NotAccreditedPharmacy':
-      return { code: 'pharmacy-credential-revoked', account: addressArg(args, 0) };
+      return { code: 'pharmacy-credential-revoked', account: revert.caller };
 
     default:
       return undefined;
   }
 }
 
-/**
- * Pulls a decoded custom error out of whatever viem threw.
- *
- * Two paths are covered, exactly as in apps/cli: the rich
- * `ContractFunctionRevertedError` raised by `simulateContract`, and a bare
- * revert data blob, which is what some nodes return when estimation is skipped.
- */
-export function decodeRegistryRejection(error: unknown): RejectionReason | undefined {
-  if (error instanceof BaseError) {
-    const reverted = error.walk((candidate) => candidate instanceof ContractFunctionRevertedError);
-
-    if (reverted instanceof ContractFunctionRevertedError && reverted.data !== undefined) {
-      return rejectionForError(reverted.data.errorName, reverted.data.args);
-    }
-  }
-
-  const raw = rawRevertData(error);
-  if (raw !== undefined) {
-    try {
-      const decoded = decodeErrorResult({ abi: prescriptionRegistryAbi, data: raw });
-      return rejectionForError(decoded.errorName, decoded.args as readonly unknown[] | undefined);
-    } catch {
-      return undefined;
-    }
-  }
-
-  return undefined;
+/** Maps one decoded custom error, by name and arguments, onto its reason. */
+export function rejectionForError(
+  errorName: string,
+  args: readonly unknown[] | undefined,
+): RejectionReason | undefined {
+  return rejectionFor(toRegistryRevert(errorName, args));
 }
 
-function rawRevertData(error: unknown): Hex | undefined {
-  if (typeof error !== 'object' || error === null) return undefined;
-
-  const candidate = (error as { data?: unknown }).data;
-  if (typeof candidate === 'string' && candidate.startsWith('0x') && candidate.length >= 10) {
-    return candidate as Hex;
-  }
-
-  const cause = (error as { cause?: unknown }).cause;
-  return cause === undefined ? undefined : rawRevertData(cause);
+/** Pulls a rejection reason out of whatever viem threw. */
+export function decodeRegistryRejection(error: unknown): RejectionReason | undefined {
+  return rejectionFor(decodeRegistryError(error));
 }

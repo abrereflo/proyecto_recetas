@@ -1,5 +1,5 @@
-import { base64ToBytes, bytesToUtf8 } from '@recetas/crypto';
-import { encryptedDocumentSchema, type EncryptedDocument } from '@recetas/shared';
+import { decodeStoredPayload } from '@recetas/chain';
+import type { EncryptedDocument } from '@recetas/shared';
 import {
   DocumentNotFoundError,
   DocumentStoreUnreachableError,
@@ -11,8 +11,8 @@ import type { PharmacyConfig } from '../config/env';
 /**
  * `DocumentPort` over `GET /prescriptions/:pointer` (services/api).
  *
- * VERIFIED against services/api/src/routes/prescriptions.ts and
- * apps/cli/src/storage.ts: the response body is
+ * VERIFIED against services/api/src/routes/prescriptions.ts and the codec in
+ * @recetas/chain: the response body is
  * `{ pointer, ciphertext, createdAt }`, and its `ciphertext` field is NOT the
  * inner AES ciphertext — it is base64 of the UTF-8 JSON of the whole
  * `EncryptedDocument` envelope. The iv, the auth tag and the signatures are
@@ -34,10 +34,12 @@ export interface HttpDocumentAdapterOptions {
   fetchImpl?: typeof fetch;
 }
 
-export function decodeStoredPayload(payload: string): EncryptedDocument {
-  const json = bytesToUtf8(base64ToBytes(payload));
-  return encryptedDocumentSchema.parse(JSON.parse(json)) as EncryptedDocument;
-}
+/**
+ * Re-exported from @recetas/chain, where the decoder now lives next to the
+ * encoder apps/cli uses to write the same field. The two are halves of one wire
+ * format and used to sit in different applications, unaware of each other.
+ */
+export { decodeStoredPayload };
 
 export function createHttpDocumentAdapter(options: HttpDocumentAdapterOptions): DocumentPort {
   const { config } = options;

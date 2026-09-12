@@ -31,6 +31,7 @@
     "paths": {
       "@recetas/shared": ["packages/shared/src/index.ts"],
       "@recetas/crypto": ["packages/crypto/src/index.ts"],
+      "@recetas/chain": ["packages/chain/src/index.ts"],
       "@recetas/rules": ["packages/rules/src/index.ts"]
     }
   },

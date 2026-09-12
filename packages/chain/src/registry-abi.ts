@@ -2,14 +2,31 @@
  * ABI of `PrescriptionRegistry`, transcribed from
  * contracts/src/IPrescriptionRegistry.sol.
  *
- * It is written here as a `const` instead of importing the Foundry artefact so
- * the CLI stays runnable without a compiled `contracts/out` tree, and so viem
+ * SINGLE SOURCE. This file used to exist twice, byte for byte, in
+ * apps/cli/src/registry-abi.ts and
+ * apps/pharmacy/src/infrastructure/chain/registry-abi.ts. Review finding
+ * read-001 (lineage review-fbc6fee420beae2b) asked for one copy: a new
+ * Solidity custom error added to one copy and forgotten in the other is a
+ * silent divergence nothing catches. The pharmacy copy already carried a TODO
+ * to promote it to a package once a third consumer appeared, and the doctor app
+ * is that third consumer.
+ *
+ * It lives here rather than in @recetas/shared because that package depends
+ * only on zod and must stay usable without viem; this one is the chain-facing
+ * package and depends on viem deliberately.
+ *
+ * It is written as a `const` instead of importing the Foundry artefact so every
+ * consumer stays runnable without a compiled `contracts/out` tree, and so viem
  * can infer argument and error types statically.
  *
  * The custom errors are part of the ABI on purpose: decoding them is what lets
  * the pharmacy say "already dispensed on X by Y" instead of "transaction
  * reverted" (docs/04-smart-contracts.md). The credential errors carry the same
  * duty: a rejected accreditation must name which of the five checks failed.
+ *
+ * A prior review verified this transcription field by field against the
+ * Solidity source; registry-abi.test.ts now re-checks it on every run by
+ * parsing contracts/src/IPrescriptionRegistry.sol.
  */
 export const prescriptionRegistryAbi = [
   {

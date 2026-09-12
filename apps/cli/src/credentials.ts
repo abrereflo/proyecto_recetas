@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import type { Account, Address, Hex, PublicClient, WalletClient } from 'viem';
+import { prescriptionRegistryAbi } from '@recetas/chain';
 import { accountOf, buildWalletClient } from './chain';
 import { ANVIL_ACCOUNTS, type CliConfig, type DemoActor } from './config';
 import { easAbi, mockEasAbi } from './eas-abi';
-import { prescriptionRegistryAbi } from './registry-abi';
 import { formatDay } from './format';
 
 /**
