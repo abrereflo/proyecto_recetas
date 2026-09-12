@@ -75,6 +75,7 @@ function harness(overrides: Overrides = {}): {
     connect: async () => PRESCRIBER,
     getChainId: async () => CONFIG.chainId,
     ensureChain: async () => undefined,
+    getProvider: () => undefined,
     signPrescription: async (input) => {
       recorder.calls.push('sign');
       recorder.signed.push(input);

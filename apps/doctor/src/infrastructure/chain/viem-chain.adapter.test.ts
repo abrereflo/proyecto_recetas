@@ -168,12 +168,56 @@ function anchorWith(client: object, send?: () => Promise<unknown>): Promise<unkn
   return createViemChainAdapter({
     config: CONFIG,
     publicClient: { simulateContract: async () => ({ request: simulated }), getBlock: async () => ({ timestamp: BLOCK_TIME }), ...client } as never,
-    getProvider: () => ({
-      request: async ({ method }) => {
-        if (method === 'eth_chainId') return chainId;
-        // The broadcast itself, so a test can fail exactly that step.
-        return send === undefined ? TRANSACTION_HASH : send();
-      },
-    }),
+    signer: {
+      getProvider: () => ({
+        request: async ({ method }) => {
+          if (method === 'eth_chainId') return chainId;
+          // The broadcast itself, so a test can fail exactly that step.
+          return send === undefined ? TRANSACTION_HASH : send();
+        },
+      }),
+    },
   }).issue({ contentHash: CONTENT_HASH, patientCommitment: PATIENT_COMMITMENT, expiresAt: EXPIRES_AT, prescriber: PRESCRIBER });
 }
+
+/**
+ * Corte 2 (docs/21-acceso-para-la-demo.md): the chain adapter used to import
+ * `injectedProvider` and reach for `window.ethereum` on its own, so a
+ * different signer implementation (the passkey swap of D-04) would never be
+ * used by the one call that actually signs. This pins the fix: the adapter
+ * resolves its provider through `SignerPort` alone, even with no injected
+ * provider at all.
+ */
+describe('the write path resolves its provider through SignerPort, not window.ethereum', () => {
+  it('anchors using the stub the port supplies, with no injected provider present', async () => {
+    expect(globalThis.window?.ethereum).toBeUndefined();
+
+    const chainId = `0x${CHAIN_ID.toString(16)}`;
+    const adapter = createViemChainAdapter({
+      config: CONFIG,
+      publicClient: {
+        simulateContract: async () => ({ request: simulated }),
+        getBlock: async () => ({ timestamp: BLOCK_TIME }),
+        waitForTransactionReceipt: async () => ({ status: 'success', blockNumber: 42n }),
+      } as never,
+      signer: {
+        getProvider: () => ({
+          request: async ({ method }) => (method === 'eth_chainId' ? chainId : TRANSACTION_HASH),
+        }),
+      },
+    });
+
+    await expect(
+      adapter.issue({
+        contentHash: CONTENT_HASH,
+        patientCommitment: PATIENT_COMMITMENT,
+        expiresAt: EXPIRES_AT,
+        prescriber: PRESCRIBER,
+      }),
+    ).resolves.toEqual({
+      transactionHash: TRANSACTION_HASH,
+      blockNumber: 42n,
+      blockTimestamp: BLOCK_TIME,
+    });
+  });
+});

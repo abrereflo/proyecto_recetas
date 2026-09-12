@@ -45,6 +45,7 @@ function aSigner(): SignerPort {
     connect: async () => PRESCRIBER,
     getChainId: async () => CHAIN_ID,
     ensureChain: async () => undefined,
+    getProvider: () => undefined,
     signPrescription: async () => `0x${'ab'.repeat(65)}`,
   };
 }

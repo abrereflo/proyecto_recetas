@@ -63,7 +63,7 @@ const SIMULATED_LEGAL_VALIDITY = /(validez legal|legalmente v[áa]lid|firma digi
  * Protocol identifiers that happen to contain a forbidden word. They are wire
  * format, never screen copy, and they stay inside the adapters.
  */
-const PROTOCOL_LITERALS = new Set(['wallet_switchEthereumChain']);
+const PROTOCOL_LITERALS = new Set(['wallet_switchEthereumChain', 'wallet_addEthereumChain']);
 
 async function sourceFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
