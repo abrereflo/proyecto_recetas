@@ -2,8 +2,8 @@ import type { Hex, PublicClient } from 'viem';
 import { accountOf, assertChainReachable, blockTimestamp, buildPublicClient } from '../chain';
 import type { CliConfig } from '../config';
 import {
-  DEMO_HOLDERS,
   assertLocalEas,
+  demoHolders,
   inspectCredential,
   issueAndRegister,
   readCredentialSetup,
@@ -41,7 +41,7 @@ export async function ensureDemoCredentials(
 ): Promise<CredentialOutcome[]> {
   const outcomes: CredentialOutcome[] = [];
 
-  for (const { actor, role } of DEMO_HOLDERS) {
+  for (const { actor, role } of demoHolders(config)) {
     const account = accountOf(actor.privateKey);
     const blockTime = await blockTimestamp(publicClient);
     const report = await inspectCredential(publicClient, config, setup, account.address, role, blockTime);

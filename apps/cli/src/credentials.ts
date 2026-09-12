@@ -1,7 +1,12 @@
 import { randomBytes } from 'node:crypto';
 import type { Account, Address, Hex, PublicClient, WalletClient } from 'viem';
 import { accountOf, buildWalletClient } from './chain';
-import { ANVIL_ACCOUNTS, type CliConfig, type DemoActor } from './config';
+import {
+  credentialIssuerAccount,
+  demoHolderAccounts,
+  type CliConfig,
+  type DemoActor,
+} from './config';
 import { easAbi, mockEasAbi } from './eas-abi';
 import { prescriptionRegistryAbi } from './registry-abi';
 import { formatDay } from './format';
@@ -57,12 +62,27 @@ const ZERO_UID = '0x000000000000000000000000000000000000000000000000000000000000
 /** One year, matching what SetupCredentials.s.sol issues. */
 const VALIDITY_SECONDS = 365n * 24n * 60n * 60n;
 
-/** The three accounts the demo needs accredited, and the role of each. */
-export const DEMO_HOLDERS: readonly { actor: DemoActor; role: CredentialRole }[] = [
-  { actor: ANVIL_ACCOUNTS.doctor, role: 'practitioner' },
-  { actor: ANVIL_ACCOUNTS.pharmacyA, role: 'pharmacy' },
-  { actor: ANVIL_ACCOUNTS.pharmacyB, role: 'pharmacy' },
-];
+export interface DemoHolder {
+  actor: DemoActor;
+  role: CredentialRole;
+}
+
+/**
+ * The three accounts the demo needs accredited, and the role of each.
+ *
+ * A function rather than a constant because the keys behind it are only
+ * reachable through a chain-gated accessor: the list cannot be built at module
+ * load, when no config exists yet to say which chain this run is on.
+ */
+export function demoHolders(config: CliConfig): readonly DemoHolder[] {
+  const holders = demoHolderAccounts(config);
+
+  return [
+    { actor: holders.doctor, role: 'practitioner' },
+    { actor: holders.pharmacyA, role: 'pharmacy' },
+    { actor: holders.pharmacyB, role: 'pharmacy' },
+  ];
+}
 
 export function roleLabel(role: CredentialRole): string {
   return role === 'practitioner' ? 'credencial médica' : 'credencial de farmacia';
@@ -238,7 +258,8 @@ export async function issueAndRegister(
   role: CredentialRole,
   blockTime: bigint,
 ): Promise<Hex> {
-  const issuerAccount = accountOf(ANVIL_ACCOUNTS.credentialIssuer.privateKey);
+  const issuer = credentialIssuerAccount(config);
+  const issuerAccount = accountOf(issuer.privateKey);
   if (issuerAccount.address.toLowerCase() !== setup.issuerAuthority.toLowerCase()) {
     throw new Error(
       `El emisor autorizado del contrato es ${setup.issuerAuthority} y esta CLI firma con ` +
@@ -252,7 +273,7 @@ export async function issueAndRegister(
 
   await sendTo(
     publicClient,
-    buildWalletClient(config, ANVIL_ACCOUNTS.credentialIssuer.privateKey),
+    buildWalletClient(config, issuer.privateKey),
     issuerAccount,
     setup.eas,
     {
@@ -283,12 +304,12 @@ export async function revokeCredential(
   setup: CredentialSetup,
   uid: Hex,
 ): Promise<Hex> {
-  const issuerAccount = accountOf(ANVIL_ACCOUNTS.credentialIssuer.privateKey);
+  const issuer = credentialIssuerAccount(config);
 
   return sendTo(
     publicClient,
-    buildWalletClient(config, ANVIL_ACCOUNTS.credentialIssuer.privateKey),
-    issuerAccount,
+    buildWalletClient(config, issuer.privateKey),
+    accountOf(issuer.privateKey),
     setup.eas,
     { functionName: 'revoke', args: [uid] },
   );

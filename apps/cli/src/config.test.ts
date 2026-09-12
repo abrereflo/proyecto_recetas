@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { doctorAccount, isLocalChain, pharmacyAccount, type CliConfig } from './config';
+import * as configModule from './config';
+import {
+  credentialIssuerAccount,
+  demoHolderAccounts,
+  doctorAccount,
+  isLocalChain,
+  pharmacyAccount,
+  type CliConfig,
+} from './config';
 
 /**
  * The demo keys checked into `config.ts` are the public Anvil accounts: they
@@ -55,5 +63,68 @@ describe('pharmacyAccount', () => {
   it('refuses to hand out a checked-in key on a public network', () => {
     expect(() => pharmacyAccount('a', config(84532))).toThrow(/84532/);
     expect(() => pharmacyAccount('b', config(1))).toThrow(/\b1\b/);
+  });
+});
+
+describe('credentialIssuerAccount', () => {
+  it('hands out the credential authority on both local chain ids', () => {
+    expect(credentialIssuerAccount(config(31337)).privateKey).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(credentialIssuerAccount(config(1337)).privateKey).toBe(
+      credentialIssuerAccount(config(31337)).privateKey,
+    );
+    expect(credentialIssuerAccount(config(31337)).label).toContain('Emisor');
+  });
+
+  it('refuses to hand out the authority key on Base Sepolia, naming the network', () => {
+    expect(() => credentialIssuerAccount(config(84532))).toThrow(/84532/);
+    expect(() => credentialIssuerAccount(config(84532))).toThrow(/p[úu]blic/i);
+  });
+});
+
+describe('demoHolderAccounts', () => {
+  it('hands out the three accredited demo accounts on both local chain ids', () => {
+    for (const chainId of [31337, 1337]) {
+      const holders = demoHolderAccounts(config(chainId));
+      expect(holders.doctor.label).toContain('Claudia');
+      expect(holders.pharmacyA.label).toContain('Bolívar');
+      expect(holders.pharmacyB.label).toContain('San Jorge');
+    }
+  });
+
+  it('returns the same keys the single-account accessors return', () => {
+    const holders = demoHolderAccounts(config(31337));
+    expect(holders.doctor).toEqual(doctorAccount(config(31337)));
+    expect(holders.pharmacyA).toEqual(pharmacyAccount('a', config(31337)));
+    expect(holders.pharmacyB).toEqual(pharmacyAccount('b', config(31337)));
+  });
+
+  it('refuses to hand out the demo holders on Base Sepolia, naming the network', () => {
+    expect(() => demoHolderAccounts(config(84532))).toThrow(/84532/);
+    expect(() => demoHolderAccounts(config(84532))).toThrow(/p[úu]blic/i);
+  });
+});
+
+/**
+ * The guard is worth no more than the narrowest way around it.
+ *
+ * Every accessor above takes a `CliConfig` precisely so a new command cannot
+ * sign without declaring a chain — but that only holds while the raw key table
+ * stays inside this module. Asserting on the module namespace is what makes
+ * re-exporting it (under any name) a failing test rather than a code review
+ * someone may or may not run.
+ */
+describe('the demo keys as module state', () => {
+  it('does not export ANVIL_ACCOUNTS', () => {
+    expect(Object.keys(configModule)).not.toContain('ANVIL_ACCOUNTS');
+  });
+
+  it('exports no value at all that carries a private key', () => {
+    // Functions serialise to `undefined`, so only data exports are inspected:
+    // the accessors are supposed to hand keys out, the module is not.
+    const leaking = Object.entries(configModule)
+      .filter(([, value]) => /0x[0-9a-fA-F]{64}/.test(JSON.stringify(value ?? null) ?? ''))
+      .map(([name]) => name);
+
+    expect(leaking).toEqual([]);
   });
 });
