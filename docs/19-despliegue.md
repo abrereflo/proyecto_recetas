@@ -191,4 +191,4 @@ Esto revierte el código, no el esquema: `drizzle-kit push` solo aplica hacia ad
 
 ## Siguiente paso
 
-No hay una fase posterior a esta en la documentación: el despliegue es el punto de llegada del pipeline descrito en [09](09-roadmap.md) y [16](16-plan-de-ejecucion.md). Ante cualquier cambio de infraestructura, este documento es el que se actualiza primero.
+El despliegue es el punto de llegada del pipeline descrito en [09](09-roadmap.md) y [16](16-plan-de-ejecucion.md), y ante cualquier cambio de infraestructura este documento es el que se actualiza primero. Lo que queda después no es una fase más, sino el manual de puesta en marcha del puesto de trabajo: [20](20-wallet-y-red-de-pruebas.md) cubre la extensión del navegador, la red que hay que agregar a mano, los AVAX de prueba de la cuenta de despliegue y la acreditación de las cuentas que firman.

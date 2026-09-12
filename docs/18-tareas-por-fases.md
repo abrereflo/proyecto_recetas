@@ -12,7 +12,9 @@ La lista operativa del buildathon. El orden no es negociable y sale de [16](16-p
 
 Prerequisito de todo lo demás. **No es progreso hacia la demo**: que Docker levante no acerca ni un minuto el pitch. Se paga una vez y se olvida.
 
-- [ ] Instalar pnpm — `corepack enable` requiere administrador en Windows; mientras tanto sirve `corepack pnpm <cmd>`
+- [x] pnpm 9.12.3 en el `PATH` del host, instalado con `npm i -g pnpm@9.12.3` — esa ruta no exige administrador, a diferencia de `corepack enable`
+- [x] Foundry 1.8.1 en el host (`forge`, `cast`, `anvil` en `~/.foundry/bin`, ya en el `PATH` de usuario) — mismo commit `982849d3` que la imagen `ghcr.io/foundry-rs/foundry:latest` del servicio `anvil`, para que el bytecode salga igual se compile donde se compile
+- [x] Dependencias de contratos instaladas: `forge-std`, `eas-contracts@v1.2.0` y `openzeppelin-contracts@v4.9.3`. `contracts/lib/` está en `.gitignore` y no viene con el clon, así que `forge build` falla hasta instalarlas y los scripts de EAS ni siquiera compilan
 - [x] Workspace pnpm en la raíz con `apps/*`, `services/*`, `packages/*`
 - [x] `tsconfig.base.json` con `strict: true` y rutas a `@recetas/shared`, `@recetas/crypto`, `@recetas/rules`
 - [x] `docker compose up -d` levanta Postgres y Anvil

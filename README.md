@@ -57,6 +57,20 @@ Health check: `curl http://localhost:3000/health`.
 
 ### Contracts
 
+Foundry is not bundled with this repository and is not installed by
+`pnpm install`. Pin it to **v1.8.1** (commit `982849d3`), the exact build the
+`anvil` service image ships, so a contract compiled on the host and one
+compiled in the container are byte for byte the same — `foundry.toml` sets
+`bytecode_hash = "none"` and pins solc precisely for that reason.
+
+On macOS, Linux or WSL, install `foundryup` from <https://getfoundry.sh> and
+pin the toolchain to `v1.8.1`. On Windows there is no installer: take
+`foundry_v1.8.1_win32_amd64.zip` from the release page, check it against the
+`.sha256` published beside it, extract `forge.exe`, `cast.exe` and `anvil.exe`
+into `%USERPROFILE%\.foundry\bin`, and add that directory to the user `PATH`.
+
+<https://github.com/foundry-rs/foundry/releases/tag/v1.8.1>
+
 Dependencies are not vendored (`contracts/lib/` is gitignored), so install them
 once. `--no-git` keeps them out of the index: this repository tracks no
 submodules.
