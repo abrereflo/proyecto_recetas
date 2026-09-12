@@ -103,7 +103,7 @@ jobs:
           # fails exactly as silently as a missing one. Only these two are
           # checked for shape: the other two are URLs with no fixed form here.
           if [ -n "$VITE_CHAIN_ID" ] && ! printf '%s' "$VITE_CHAIN_ID" | grep -Eq '^[1-9][0-9]*$'; then
-            problems+=("VITE_CHAIN_ID must be a positive integer, for example 84532 on Base Sepolia. Current value: '${VITE_CHAIN_ID}'.")
+            problems+=("VITE_CHAIN_ID must be a positive integer, for example 43113 on Avalanche Fuji. Current value: '${VITE_CHAIN_ID}'.")
           fi
 
           if [ -n "$VITE_PRESCRIPTION_REGISTRY_ADDRESS" ] && ! printf '%s' "$VITE_PRESCRIPTION_REGISTRY_ADDRESS" | grep -Eq '^0x[0-9a-fA-F]{40}$'; then

@@ -12,7 +12,7 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   /** Comma-separated list of allowed browser origins. */
   CORS_ORIGIN: z.string().default('http://localhost:5173,http://localhost:5174'),
-  /** RPC endpoint. Anvil locally, Base Sepolia for integration. */
+  /** RPC endpoint. Anvil locally, Avalanche Fuji for integration. */
   RPC_URL: z.string().url().default('http://localhost:8545'),
   CHAIN_ID: z.coerce.number().int().positive().default(31337),
   PRESCRIPTION_REGISTRY_ADDRESS: z.string().optional(),

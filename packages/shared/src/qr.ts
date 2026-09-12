@@ -17,7 +17,7 @@ export const QR_PAYLOAD_VERSION = 1 as const;
 export interface QrPayload {
   /** Envelope version. */
   v: number;
-  /** EVM chain id. Base Sepolia is 84532. */
+  /** EVM chain id. Avalanche Fuji is 43113. */
   chainId: number;
   /** PrescriptionRegistry address. */
   registry: string;

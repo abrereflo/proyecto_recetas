@@ -72,7 +72,7 @@ export function ManualEntryScreen({ onSubmit, onCancel, problem }: ManualEntrySc
               setRaw(event.target.value);
               setLocalProblem(null);
             }}
-            placeholder={'{"v":1,"chainId":84532,…}'}
+            placeholder={'{"v":1,"chainId":43113,…}'}
             rows={8}
             value={raw}
           />

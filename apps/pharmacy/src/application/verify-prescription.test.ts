@@ -380,7 +380,7 @@ describe('a code from another deployment', () => {
     const spy = vi.fn(async () => fixture.chainState);
     const verify = build(fixture, { chain: { verify: spy } });
 
-    const result = await verify({ qr: { ...fixture.qr, chainId: 84532 } });
+    const result = await verify({ qr: { ...fixture.qr, chainId: 43113 } });
 
     if (result.outcome !== 'rejected') throw new Error('expected a rejection');
     // NOT `network-error`: nothing was asked of the network, so nothing about
@@ -388,7 +388,7 @@ describe('a code from another deployment', () => {
     expect(result.reason).toEqual({
       code: 'wrong-deployment',
       expectedChainId: CHAIN_ID,
-      actualChainId: 84532,
+      actualChainId: 43113,
       expectedRegistry: REGISTRY_ADDRESS,
       actualRegistry: REGISTRY_ADDRESS,
     });
@@ -419,7 +419,7 @@ describe('a code from another deployment', () => {
     const fixture = await seal();
     const verify = build(fixture);
 
-    const result = await verify({ qr: { ...fixture.qr, chainId: 84532 } });
+    const result = await verify({ qr: { ...fixture.qr, chainId: 43113 } });
 
     if (result.outcome !== 'rejected') throw new Error('expected a rejection');
     expect(result.checks).toHaveLength(5);

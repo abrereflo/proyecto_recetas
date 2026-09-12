@@ -1,7 +1,7 @@
 import { createPublicClient, defineChain, http, type Chain, type PublicClient } from 'viem';
 
 /**
- * Chain plumbing, built from configuration instead of importing `baseSepolia`.
+ * Chain plumbing, built from configuration instead of importing `avalancheFuji`.
  *
  * SINGLE SOURCE. This was duplicated between apps/cli/src/chain.ts and
  * apps/pharmacy/src/infrastructure/chain/viem-chain.ts, whose own header said
@@ -18,11 +18,30 @@ export interface ChainConfig {
   rpcUrl: string;
 }
 
+/** Avalanche Fuji, the integration network (docs/01-arquitectura.md). */
+const FUJI_CHAIN_ID = 43113;
+
+/**
+ * The native coin is not always Ether.
+ *
+ * Avalanche is an independent L1, not an Ethereum L2, and its C-Chain pays gas
+ * in AVAX. Hardcoding Ether here used to be harmless while everything ran on an
+ * Ethereum testnet; on Fuji it would make viem label every fee in a currency
+ * that does not exist on the chain.
+ */
+function nativeCurrencyOf(chainId: number): Chain['nativeCurrency'] {
+  if (chainId === FUJI_CHAIN_ID) {
+    return { name: 'Avalanche', symbol: 'AVAX', decimals: 18 };
+  }
+
+  return { name: 'Ether', symbol: 'ETH', decimals: 18 };
+}
+
 export function buildChain(config: ChainConfig): Chain {
   return defineChain({
     id: config.chainId,
     name: config.chainId === 31337 ? 'Anvil' : `Cadena ${config.chainId}`,
-    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    nativeCurrency: nativeCurrencyOf(config.chainId),
     rpcUrls: { default: { http: [config.rpcUrl] } },
   });
 }

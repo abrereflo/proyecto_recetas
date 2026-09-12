@@ -1,17 +1,17 @@
 # 08 — Stack y entorno
 
-Foundry para los contratos, Base Sepolia como red, un proveedor de infraestructura ERC-4337 para bundler y paymaster, React para las dos aplicaciones y Postgres para el payload cifrado. La regla que gobierna cada elección es la misma: si no se puede montar y demostrar en setenta y dos horas, no entra.
+Foundry para los contratos, Avalanche Fuji como red, un proveedor de infraestructura ERC-4337 para bundler y paymaster, React para las dos aplicaciones y Postgres para el payload cifrado. La regla que gobierna cada elección es la misma: si no se puede montar y demostrar en setenta y dos horas, no entra.
 
 ## Stack recomendado
 
 | Capa | Elección | Alternativas | Por qué esta |
 |---|---|---|---|
-| Red | Base Sepolia | Arbitrum Sepolia, Scroll Sepolia | Mejor tooling de paymaster y passkeys en el plazo disponible |
+| Red | Avalanche Fuji (chainId 43113) | Base Sepolia, Arbitrum Sepolia, Scroll Sepolia | Cadena EVM pública con RIP-7212 comprobado en vivo. Es una L1 independiente, no una L2 de Ethereum: ver la tabla de decisión de [01](01-arquitectura.md) |
 | Contratos | Solidity 0.8.x | — | Estándar del EVM |
 | Tooling de contratos | **Foundry** | Hardhat | `forge test` es rápido, el fuzzing viene incluido y las pruebas se escriben en Solidity, sin cambiar de lenguaje |
 | Cuenta | Smart account ERC-4337 con verificación P-256 | EIP-7702 | El médico no tiene wallet previa; 4337 no la exige |
 | Bundler y paymaster | Proveedor de infraestructura de account abstraction | Bundler propio | Montar un bundler propio consume el buildathon entero |
-| Credenciales | EAS en Base Sepolia | Registro propio en Solidity | Ya desplegado, con esquema, revocación y exploradores |
+| Credenciales | EAS v1.2.0 **desplegado por el propio proyecto** | Registro propio en Solidity | Avalanche no tiene despliegue oficial de EAS, así que lo desplegamos nosotros. Aun así gana al registro propio: esquema tipado, revocación y herramientas que ya existen, sin escribir contrato nuevo |
 | Frontend | React con TypeScript y Vite | Next.js | Dos SPA sencillas; no necesitamos renderizado en servidor |
 | Firma del usuario | WebAuthn del navegador (passkeys) | Wallet de extensión | Ningún médico instalará una extensión |
 | QR | Biblioteca de generación y lectura en el navegador | App nativa | La cámara del navegador basta |
@@ -47,6 +47,8 @@ proyecto_recetas/
 │  │  ├─ PrescriptionRegistry.t.sol
 │  │  └─ invariants/
 │  ├─ script/
+│  │  ├─ DeployEAS.s.sol       # EAS v1.2.0 propio: SchemaRegistry + EAS
+│  │  ├─ RegisterSchemas.s.sol # los dos esquemas de credencial
 │  │  └─ Deploy.s.sol
 │  └─ foundry.toml
 ├─ apps/
@@ -66,8 +68,8 @@ proyecto_recetas/
 | Entorno | Red | Propósito | Datos |
 |---|---|---|---|
 | Local | Anvil | Desarrollo de contratos y pruebas | Sintéticos |
-| Integración | Base Sepolia | Demo del buildathon, pruebas de extremo a extremo | Sintéticos |
-| Piloto | Base Sepolia o L2 en mainnet | Uso con una clínica y una farmacia reales | Reales, con consentimiento |
+| Integración | Avalanche Fuji | Demo del buildathon, pruebas de extremo a extremo | Sintéticos |
+| Piloto | Avalanche Fuji o una cadena EVM en mainnet | Uso con una clínica y una farmacia reales | Reales, con consentimiento |
 
 > **Nunca datos de pacientes reales fuera del entorno de piloto**, y en él solo con consentimiento explícito documentado.
 
@@ -111,14 +113,21 @@ proyecto_recetas/
 # contracts
 forge build
 forge test -vvv
-forge script script/Deploy.s.sol --rpc-url $BASE_SEPOLIA_RPC --broadcast --verify
+
+# EAS es propio del proyecto: primero se despliega, después se registran los
+# esquemas, y solo entonces el registro. Detalle completo en 19-despliegue.md.
+forge script script/DeployEAS.s.sol       --rpc-url fuji --broadcast
+forge script script/RegisterSchemas.s.sol --rpc-url fuji --broadcast
+forge script script/Deploy.s.sol          --rpc-url fuji --broadcast --verify
 
 # apps
 pnpm -C apps/doctor build
 pnpm -C apps/pharmacy build
 ```
 
-`SUPUESTO:` el equipo dispone de una URL de RPC para Base Sepolia y de ETH de testnet suficiente para desplegar y financiar el paymaster.
+El alias `fuji` sale de `[rpc_endpoints]` en `contracts/foundry.toml` y se resuelve con `FUJI_RPC_URL`.
+
+`SUPUESTO:` el equipo dispone de una URL de RPC para Avalanche Fuji y de AVAX de testnet suficiente para desplegar y financiar el paymaster. Ahora el despliegue son tres transacciones más que antes —`SchemaRegistry`, `EAS` y los dos registros de esquema—, porque la instancia de EAS ya no viene dada por la red.
 
 ## Siguiente paso
 
