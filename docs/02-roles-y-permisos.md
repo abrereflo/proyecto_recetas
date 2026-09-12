@@ -14,6 +14,8 @@ La autorización se resuelve con una pregunta: ¿esta dirección tiene una attes
 
 > **El paciente no tiene wallet en el MVP.** Es una decisión de producto, no una limitación técnica: añadir gestión de claves al paciente multiplica la fricción y no aporta nada a la demo. Vuelve en [Fase 2](09-roadmap.md), cuando el paciente necesite controlar quién lee su historial.
 
+> **La fila "Farmacia" dice menos de lo que parece.** La credencial acredita al establecimiento, no a la persona que atiende el mostrador, y el esquema no distingue una farmacia independiente de una sucursal de cadena o de la farmacia de un centro de salud. Ambas cosas son huecos del modelo, no detalles de implementación: ver [D-29](#d-29) y [D-30](#d-30).
+
 ## Autoridad sanitaria y pagadores: qué reciben
 
 El informe base asignaba a gobierno y aseguradoras la función de "supervisar tendencias de salud pública y procesar reembolsos mediante accesos auditables". Ninguno de los dos actores existe en el MVP y, cuando aparezcan, lo que pueden recibir está acotado por la regla dura de [03](03-modelo-de-datos.md).
@@ -97,6 +99,22 @@ stateDiagram-v2
 > **Opciones.** (a) Verificación presencial en el alta, por la clínica o el colegio. (b) Verificación mediante certificado digital ADSIB, que ya identifica legalmente al titular. (c) Verificación con documento de identidad y prueba de vivacidad por un proveedor.
 > **Recomendación.** Opción (b) cuando el médico ya posee certificado ADSIB, porque resuelve simultáneamente la identificación y la doble firma descrita en [07](07-seguridad-y-cumplimiento.md); (a) como camino alternativo. La opción (c) introduce tratamiento de datos biométricos sin un marco de protección de datos claro en Bolivia y no se adopta en esta etapa.
 > **Impacto si se difiere.** Toda la cadena de confianza queda apoyada en una afirmación no verificada, que es exactamente el problema que el proyecto dice resolver.
+
+<a id="d-29"></a>
+
+> **Decisión pendiente — D-29: tipo de farmacia en la credencial**
+> **Contexto.** El esquema registrado en `contracts/script/RegisterSchemas.s.sol` es `PharmacyCredential(string pharmacyLicense, string sanitaryRegistryRef, address issuerAuthority, uint64 validFrom, uint64 validUntil)`. No tiene campo de tipo, de modo que el sistema no distingue hoy entre una farmacia independiente, una sucursal de una cadena de venta al público y la farmacia de un centro de salud. Las tres se acreditan igual y dispensan igual. La distinción importa por dos motivos: el régimen de sustancias controladas de [07](07-seguridad-y-cumplimiento.md) no es el mismo para una oficina de farmacia que para un servicio hospitalario, y la supervisión agregada que este documento promete —agregados por farmacia— necesita saber qué representa cada dirección.
+> **Opciones.** (a) Añadir un campo `pharmacyType` al esquema, con un conjunto cerrado de valores acordado con SEDES. (b) No tocar el esquema y derivar el tipo off-chain desde `sanitaryRegistryRef`, que ya identifica el establecimiento en el registro sanitario. (c) Registrar un esquema distinto por tipo, de modo que el contrato pueda exigir uno u otro según el medicamento. (d) No modelarlo: toda farmacia acreditada es equivalente.
+> **Recomendación.** (b) para el piloto, porque no obliga a migrar credenciales ya emitidas y porque la fuente de verdad sobre qué es cada establecimiento es el registro sanitario, no una afirmación del proyecto. Reservar (c) para cuando entren sustancias controladas ([D-18](07-seguridad-y-cumplimiento.md)), que es el único caso conocido en que el contrato necesitaría decidir según el tipo. La opción (a) parece la más simple y es la más cara: un cambio de esquema cambia el uid y obliga a reemitir todas las credenciales vigentes.
+> **Impacto si se difiere.** Bajo mientras el piloto sea una clínica y las farmacias de su radio. Alto en cuanto entre una cadena o un servicio hospitalario, porque para entonces habrá credenciales emitidas bajo un esquema que no sabe distinguirlas.
+
+<a id="d-30"></a>
+
+> **Decisión pendiente — D-30: identidad del operador que dispensa**
+> **Contexto.** La credencial acredita a la **organización**, nunca a la persona. `credentialOf` asocia una dirección con una attestation, y el registro on-chain guarda `dispensedBy` con esa dirección: quien tenga el dispositivo dispensa como la farmacia. El modelo de amenazas de [07](07-seguridad-y-cumplimiento.md) ya lo admite al declarar no mitigado el caso de una farmacia acreditada que presta su cuenta a un tercero. Esto deja de ser aceptable con sustancias controladas: el *Libro de Control de Estupefacientes* previsto por la Ley 913 y el DS 3434 registra al farmacéutico que dispensa, con nombre. Un asiento que diga únicamente "Farmacia Bolívar, 14:32" no satisface ese requisito, y en una cadena con varios turnos por sucursal tampoco permite responder quién entregó.
+> **Opciones.** (a) Una credencial de farmacéutico, análoga a `PractitionerCredential`, de modo que dispensar exija dos acreditaciones: la del establecimiento y la de la persona. (b) Una dirección por operador, todas acreditadas bajo la misma licencia de establecimiento. (c) Registrar al operador solo off-chain, en el almacén cifrado, junto al documento. (d) No modelarlo: la responsabilidad es del establecimiento.
+> **Recomendación.** (c) para el piloto ambulatorio, porque añade trazabilidad de persona sin ampliar lo que se escribe en una cadena pública ni multiplicar las credenciales a emitir. (a) es el destino si el proyecto llega a sustancias controladas, y conviene diseñarlo junto con [D-18](07-seguridad-y-cumplimiento.md) en lugar de por separado. La opción (b) parece equivalente a (a) y no lo es: convierte cada alta y cada baja de empleado en una operación on-chain de la autoridad emisora.
+> **Impacto si se difiere.** Ninguno sobre la demo. Sobre el piloto, el sistema no puede responder quién entregó un medicamento, que es exactamente la pregunta que un regulador hace primero cuando algo sale mal.
 
 ## Privilegio mínimo
 
