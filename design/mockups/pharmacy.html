@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maquetas — App de farmacia (PWA)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+  <link rel="stylesheet" href="board.css">
+</head>
+<body>
+<div class="board">
+
+  <nav class="nav-mockups">
+    <a href="index.html">Sistema de diseño</a>
+    <a href="doctor.html">App del médico</a>
+    <a href="pharmacy.html" aria-current="page">App de farmacia (PWA)</a>
+  </nav>
+
+  <header class="board__intro">
+    <h1 class="board__title">App de farmacia — PWA móvil</h1>
+    <p class="board__lede">
+      Esta es la única de las dos que se instala como PWA, y no por moda: necesita cámara, se usa de pie
+      en un mostrador y con una sola mano. Ocho pantallas, incluida la que sostiene el pitch entero.
+    </p>
+  </header>
+
+  <div class="board__grid board__grid--phone">
+
+    <!-- P1 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">P1</span><span class="frame__name">Acceso e instalación</span></div>
+      <p class="frame__note">La credencial de farmacia se comprueba antes de habilitar el escáner.</p>
+      <div class="viewport-phone">
+        <div class="viewport-phone__statusbar"><span>09:41</span><span>100%</span></div>
+        <div class="viewport-phone__body">
+          <div class="stack" style="flex:1">
+            <h1 class="title-screen">Farmacia San Jorge</h1>
+            <dl class="kv">
+              <dt>Licencia</dt><dd class="mono">FARM-2214-SC</dd>
+              <dt>Credencial</dt><dd><span class="badge badge--success">Vigente</span></dd>
+              <dt>Vence</dt><dd>31/12/2026</dd>
+            </dl>
+
+            <div class="alert alert--info">
+              <span class="alert__icon" aria-hidden="true">&#9432;</span>
+              <div>
+                <p class="alert__title">Instale la aplicación</p>
+                <p class="alert__body">Añádala a la pantalla de inicio para abrir la cámara en un toque.</p>
+              </div>
+            </div>
+
+            <div style="flex:1"></div>
+            <button class="btn btn--primary btn--lg btn--block">Escanear receta</button>
+            <button class="btn btn--ghost btn--block">Introducir código a mano</button>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>La entrada manual no es una concesión: es la contingencia de la demo.</strong>
+        El plan de riesgos ya contempla que la cámara falle en la sala. Si esa salida no está en la interfaz
+        desde el principio, no aparece por arte de magia el día del pitch.
+      </div>
+    </section>
+
+    <!-- P2 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">P2</span><span class="frame__name">Escáner</span></div>
+      <p class="frame__note">Pantalla completa, sin adornos. La cámara es toda la interfaz.</p>
+      <div class="viewport-phone">
+        <div class="viewport-phone__statusbar"><span>09:41</span><span>100%</span></div>
+        <div class="viewport-phone__body" style="padding:0">
+          <div class="scanner" style="flex:1;border-radius:0;aspect-ratio:auto">
+            <div class="scanner__frame"></div>
+            <span class="scanner__hint">Encuadre el código de la receta</span>
+          </div>
+          <div style="padding:var(--space-4)">
+            <button class="btn btn--secondary btn--block">Introducir código a mano</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- P3 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">P3</span><span class="frame__name">Verificando</span></div>
+      <p class="frame__note">Se enseña qué se está comprobando, no una rueda girando.</p>
+      <div class="viewport-phone">
+        <div class="viewport-phone__statusbar"><span>09:41</span><span>100%</span></div>
+        <div class="viewport-phone__body">
+          <div class="stack" style="flex:1;justify-content:center">
+            <h1 class="title-screen">Verificando receta</h1>
+            <p class="mono text-muted" style="margin:0">0x9f2c41ab…7de0</p>
+
+            <ul class="stack stack--tight" style="list-style:none;padding:0;margin:0">
+              <li class="row"><span style="color:var(--color-success)">&#10003;</span> Registrada en la cadena</li>
+              <li class="row"><span style="color:var(--color-success)">&#10003;</span> No dispensada, dentro de vigencia</li>
+              <li class="row"><span style="color:var(--color-success)">&#10003;</span> Contenido íntegro</li>
+              <li class="row"><span style="color:var(--color-success)">&#10003;</span> Firma del prescriptor válida</li>
+              <li class="row text-muted"><span>&#9675;</span> Correspondencia con el paciente…</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Cinco comprobaciones, cinco líneas.</strong> Integridad, vigencia, unicidad, firma y correspondencia
+        son verificaciones distintas que pueden fallar por motivos distintos. Colapsarlas en un spinner impide
+        que el farmacéutico sepa qué falló cuando algo falle.
+      </div>
+    </section>
+
+    <!-- P4 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">P4</span><span class="frame__name">Receta verificada</span></div>
+      <p class="frame__note">Contenido descifrado en el dispositivo. La entrega la confirma una persona.</p>
+      <div class="viewport-phone">
+        <div class="viewport-phone__statusbar"><span>09:41</span><span>100%</span></div>
+        <div class="viewport-phone__body">
+          <div class="stack" style="flex:1">
+            <span class="badge badge--success">Verificada · dispensable</span>
+            <h1 class="title-screen">Lucía Vargas Antelo</h1>
+            <p class="text-muted" style="margin:0">
+              Dr. Roberto Méndez Salazar · <span class="mono">MED-7741-SC</span><br>
+              Emitida 11/09/2026 · caduca 11/10/2026
+            </p>
+
+            <div class="card stack stack--tight" style="padding:var(--space-4)">
+              <strong>ibuprofeno 400 mg</strong>
+              <span class="mono text-muted">M01AE01 · comprimido</span>
+              <span class="text-secondary">20 unidades — 1 cada 8 horas por 5 días</span>
+            </div>
+
+            <div class="card stack stack--tight" style="padding:var(--space-4)">
+              <strong>amoxicilina 500 mg</strong>
+              <span class="mono text-muted">J01CA04 · cápsula</span>
+              <span class="text-secondary">21 unidades — 1 cada 8 horas por 7 días</span>
+            </div>
+
+            <p class="text-muted" style="margin:0">
+              Se prescribe por principio activo. La equivalencia comercial queda a su criterio.
+            </p>
+
+            <div style="flex:1"></div>
+            <button class="btn btn--primary btn--lg btn--block">Confirmar entrega</button>
+            <button class="btn btn--ghost btn--block">Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Confirmar entrega es un acto humano, no un efecto secundario del escaneo.</strong>
+        La transición a <code>Dispensed</code> es irreversible. Disparar algo irreversible con un gesto pasivo
+        —enfocar un QR— es un error de diseño, no una optimización de flujo.
+      </div>
+    </section>
+
+    <!-- P5 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">P5</span><span class="frame__name">Dispensada</span></div>
+      <p class="frame__note">Comprobante con la evidencia en cadena.</p>
+      <div class="viewport-phone">
+        <div class="viewport-phone__statusbar"><span>09:42</span><span>100%</span></div>
+        <div class="viewport-phone__body">
+          <div class="stack" style="flex:1">
+            <div class="verdict verdict--success">
+              <span class="verdict__mark" aria-hidden="true">&#10003;</span>
+              <h1 class="verdict__headline">Entregada</h1>
+              <p class="verdict__reason">Esta receta ya no puede volver a dispensarse en ninguna farmacia.</p>
+            </div>
+
+            <dl class="kv">
+              <dt>Receta</dt><dd class="mono">0x9f2c41ab…7de0</dd>
+              <dt>Fecha</dt><dd>11/09/2026 09:42</dd>
+              <dt>Farmacia</dt><dd class="mono">0x51Ae…8837</dd>
+            </dl>
+
+            <div style="flex:1"></div>
+            <button class="btn btn--secondary btn--block">Ver en el explorador</button>
+            <button class="btn btn--primary btn--block">Escanear otra</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- P6 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">P6</span><span class="frame__name">RECHAZADA — ya dispensada</span></div>
+      <p class="frame__note">Segundo escaneo del mismo código. Esta pantalla es el pitch.</p>
+      <div class="viewport-phone">
+        <div class="viewport-phone__statusbar"><span>09:43</span><span>100%</span></div>
+        <div class="viewport-phone__body">
+          <div class="stack" style="flex:1">
+            <div class="verdict verdict--danger" style="flex:1;justify-content:center">
+              <span class="verdict__mark" aria-hidden="true">&#10007;</span>
+              <h1 class="verdict__headline">NO ENTREGAR</h1>
+              <p class="verdict__reason">
+                Esta receta ya fue dispensada el <strong>11/09/2026 a las 09:42</strong> por otra farmacia.
+              </p>
+            </div>
+
+            <dl class="kv">
+              <dt>Dispensada por</dt><dd class="mono">0x51Ae…8837</dd>
+              <dt>Receta</dt><dd class="mono">0x9f2c41ab…7de0</dd>
+            </dl>
+
+            <button class="btn btn--secondary btn--block">Ver la prueba en el explorador</button>
+            <button class="btn btn--ghost btn--block">Escanear otra</button>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>48 píxeles, no 16.</strong> Esta pantalla se proyecta ante un jurado y se lee a tres metros.
+        Y en el mostrador real cumple la misma función: el farmacéutico tiene que verla sin acercarse el teléfono a la cara.
+      </div>
+      <div class="annotation">
+        <strong>«Quién» y «cuándo» vienen del propio error del contrato.</strong>
+        <code>AlreadyDispensed</code> devuelve <code>dispensedBy</code> y <code>dispensedAt</code>. Por eso la pantalla
+        puede acusar con fecha y dirección en lugar de decir «operación fallida», que es lo que diría cualquier otro sistema.
+      </div>
+    </section>
+
+    <!-- P7 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">P7</span><span class="frame__name">Otros rechazos</span></div>
+      <p class="frame__note">Cada error del contrato tiene su mensaje. Ninguno cae en un genérico.</p>
+      <div class="viewport-phone">
+        <div class="viewport-phone__statusbar"><span>09:44</span><span>100%</span></div>
+        <div class="viewport-phone__body">
+          <div class="stack" style="flex:1">
+            <h2 class="title-section">Catálogo de rechazos</h2>
+
+            <div class="alert alert--danger">
+              <span class="alert__icon" aria-hidden="true">&#10007;</span>
+              <div>
+                <p class="alert__title">Receta caducada</p>
+                <p class="alert__body">Venció el 02/09/2026. Pida al paciente una receta nueva.</p>
+                <p class="text-muted" style="margin:4px 0 0"><span class="mono">PrescriptionExpired</span></p>
+              </div>
+            </div>
+
+            <div class="alert alert--danger">
+              <span class="alert__icon" aria-hidden="true">&#10007;</span>
+              <div>
+                <p class="alert__title">Receta anulada por el médico</p>
+                <p class="alert__body">El prescriptor la canceló antes de la entrega.</p>
+                <p class="text-muted" style="margin:4px 0 0"><span class="mono">PrescriptionCancelledError</span></p>
+              </div>
+            </div>
+
+            <div class="alert alert--danger">
+              <span class="alert__icon" aria-hidden="true">&#10007;</span>
+              <div>
+                <p class="alert__title">Código no reconocido</p>
+                <p class="alert__body">No corresponde a ninguna receta registrada.</p>
+                <p class="text-muted" style="margin:4px 0 0"><span class="mono">UnknownPrescription</span></p>
+              </div>
+            </div>
+
+            <div class="alert alert--danger">
+              <span class="alert__icon" aria-hidden="true">&#10007;</span>
+              <div>
+                <p class="alert__title">Su credencial de farmacia fue revocada</p>
+                <p class="alert__body">No puede dispensar. Contacte con la entidad emisora.</p>
+                <p class="text-muted" style="margin:4px 0 0"><span class="mono">NotAccreditedPharmacy</span></p>
+              </div>
+            </div>
+
+            <div class="alert alert--danger">
+              <span class="alert__icon" aria-hidden="true">&#10007;</span>
+              <div>
+                <p class="alert__title">El contenido no coincide con lo registrado</p>
+                <p class="alert__body">
+                  Esta receta no es la que se firmó. No la entregue y avise a la clínica emisora.
+                </p>
+                <p class="text-muted" style="margin:4px 0 0">Integridad, correspondencia o firma inválidas</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Cinco motivos, cinco acciones distintas para el farmacéutico.</strong>
+        Caducada se resuelve pidiendo una receta nueva; contenido alterado exige avisar a la clínica.
+        Un mensaje genérico convierte dos situaciones muy distintas en el mismo encogimiento de hombros.
+      </div>
+    </section>
+
+    <!-- P8 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">P8</span><span class="frame__name">Entrada manual</span></div>
+      <p class="frame__note">Contingencia si la cámara falla en la sala del pitch o en el mostrador.</p>
+      <div class="viewport-phone">
+        <div class="viewport-phone__statusbar"><span>09:41</span><span>100%</span></div>
+        <div class="viewport-phone__body">
+          <div class="stack" style="flex:1">
+            <h1 class="title-screen">Introducir código</h1>
+            <div class="field">
+              <label class="field__label" for="p-code">Contenido del QR</label>
+              <textarea class="field__control mono" id="p-code" rows="6" placeholder='{"v":1,"chainId":84532,…}'></textarea>
+              <span class="field__hint">Pegue el contenido completo, incluida la clave de descifrado.</span>
+            </div>
+            <div style="flex:1"></div>
+            <button class="btn btn--primary btn--lg btn--block">Verificar</button>
+          </div>
+        </div>
+      </div>
+      <div class="annotation annotation--pending">
+        <strong>D-20 sin resolver.</strong> No hay comportamiento decidido para una farmacia sin conectividad.
+        La firma se puede verificar sin red, pero eso prueba autenticidad, no unicidad: sin cadena no se sabe
+        si ya se dispensó. Ninguna pantalla del MVP promete funcionar offline.
+      </div>
+    </section>
+
+  </div>
+</div>
+</body>
+</html>

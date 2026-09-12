@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maquetas — App del médico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+  <link rel="stylesheet" href="board.css">
+</head>
+<body>
+<div class="board">
+
+  <nav class="nav-mockups">
+    <a href="index.html">Sistema de diseño</a>
+    <a href="doctor.html" aria-current="page">App del médico</a>
+    <a href="pharmacy.html">App de farmacia (PWA)</a>
+  </nav>
+
+  <header class="board__intro">
+    <h1 class="board__title">App del médico — escritorio</h1>
+    <p class="board__lede">
+      Siete pantallas que cubren el recorrido completo: acceso con passkey, redacción, validación clínica,
+      firma EIP-712 y entrega del QR. Se diseña para una estación de trabajo de consultorio porque el médico
+      escribe la receta sentado, con teclado.
+    </p>
+  </header>
+
+  <div class="board__grid">
+
+    <!-- D1 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">D1</span><span class="frame__name">Acceso con passkey</span></div>
+      <p class="frame__note">Sin contraseña, sin frase semilla, sin extensión de navegador.</p>
+      <div class="viewport-desktop">
+        <div class="viewport-desktop__chrome">
+          <span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span>
+          <span class="viewport-desktop__url">receta.clinica.bo/acceso</span>
+        </div>
+        <div class="viewport-desktop__body">
+          <div class="card stack">
+            <div class="stack stack--tight">
+              <h2 class="title-screen">Receta Verificable</h2>
+              <p class="text-secondary" style="margin:0">Acceda con la huella, el rostro o el PIN de este dispositivo.</p>
+            </div>
+
+            <button class="btn btn--primary btn--lg btn--block">Continuar con la passkey de este equipo</button>
+
+            <div class="alert alert--info">
+              <span class="alert__icon" aria-hidden="true">&#9432;</span>
+              <div>
+                <p class="alert__title">Su clave no sale de este dispositivo</p>
+                <p class="alert__body">
+                  Se guarda en el módulo seguro del equipo. No se puede copiar, exportar ni enviar por correo.
+                  No necesita instalar nada ni disponer de saldo para firmar.
+                </p>
+              </div>
+            </div>
+
+            <p class="text-muted" style="margin:0">
+              Dr. Roberto Méndez Salazar · Matrícula <span class="mono">MED-7741-SC</span>
+              <span class="badge badge--success" style="margin-left:8px">Credencial vigente</span>
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Por qué no aparece la palabra «wallet» en ninguna parte.</strong>
+        El médico no tiene ni quiere tener una. La smart account ERC-4337 existe y el paymaster paga el gas,
+        pero eso es fontanería: exponerla convierte una herramienta clínica en un producto cripto y pierde al usuario.
+      </div>
+      <div class="annotation annotation--pending">
+        <strong>D-04 sin resolver.</strong> No hay flujo de recuperación si se pierde el dispositivo.
+        Si se adopta la recomendación (dos passkeys en el alta), aquí falta una pantalla de registro de respaldo.
+      </div>
+    </section>
+
+    <!-- D2 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">D2</span><span class="frame__name">Paciente y contexto clínico</span></div>
+      <p class="frame__note">El contexto que el motor evaluará después se escribe aquí, y en ningún otro sitio.</p>
+      <div class="viewport-desktop">
+        <div class="viewport-desktop__chrome">
+          <span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span>
+          <span class="viewport-desktop__url">receta.clinica.bo/nueva</span>
+        </div>
+        <div class="viewport-desktop__body">
+          <div class="stack">
+            <ol class="steps">
+              <li class="steps__item steps__item--current">1 · Paciente</li>
+              <li class="steps__item">2 · Medicación</li>
+              <li class="steps__item">3 · Revisión</li>
+              <li class="steps__item">4 · Firma</li>
+            </ol>
+
+            <div class="card stack">
+              <h2 class="title-section">Datos del paciente</h2>
+              <div class="grid-2">
+                <div class="field">
+                  <label class="field__label" for="f-pid">Cédula de identidad <span class="field__required">*</span></label>
+                  <input class="field__control" id="f-pid" value="4821776 SC">
+                  <span class="field__hint">No se publica. Solo viaja su compromiso criptográfico.</span>
+                </div>
+                <div class="field">
+                  <label class="field__label" for="f-name">Nombre completo <span class="field__required">*</span></label>
+                  <input class="field__control" id="f-name" value="Lucía Vargas Antelo">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="f-birth">Fecha de nacimiento <span class="field__required">*</span></label>
+                  <input class="field__control" id="f-birth" value="1991-03-14">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="f-exp">Vigencia de la receta</label>
+                  <input class="field__control" id="f-exp" value="30 días — vence 11/10/2026">
+                  <span class="field__hint">Caduca a medianoche del día indicado.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card stack">
+              <div class="card__header" style="margin:0">
+                <h2 class="title-section">Contexto clínico</h2>
+                <span class="badge badge--neutral">Se evalúa localmente</span>
+              </div>
+              <div class="field">
+                <label class="field__label" for="f-allergy">Alergias declaradas</label>
+                <input class="field__control" id="f-allergy" value="Penicilinas">
+              </div>
+              <div class="field">
+                <label class="field__label" for="f-conmed">Medicación concomitante</label>
+                <input class="field__control" id="f-conmed" value="Warfarina 5 mg">
+              </div>
+              <div class="alert alert--warning">
+                <span class="alert__icon" aria-hidden="true">&#9888;</span>
+                <div>
+                  <p class="alert__title">El sistema no consulta ningún historial</p>
+                  <p class="alert__body">
+                    Las alertas se calculan únicamente sobre lo que usted escriba en este apartado.
+                    Lo que no se declare aquí, no se detecta.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="row row--end">
+              <button class="btn btn--secondary">Guardar borrador</button>
+              <button class="btn btn--primary">Continuar a medicación</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Ese aviso ámbar no es relleno legal, es una obligación de diseño.</strong>
+        El motor de reglas no tiene historial clínico. Si la interfaz no lo dice, el médico asumirá cobertura
+        que no existe y confiará en un silencio que no significa «no hay riesgo», sino «no me lo contaste».
+      </div>
+      <div class="annotation annotation--pending">
+        <strong>D-25 sin resolver</strong> (origen del contexto clínico) y
+        <strong>D-13</strong> (precisión de la caducidad: se asume medianoche del día de vencimiento).
+        <code>age</code> y <code>weight</code> no se capturan en el MVP.
+      </div>
+    </section>
+
+    <!-- D3 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">D3</span><span class="frame__name">Medicación y alerta moderada</span></div>
+      <p class="frame__note">Duplicidad terapéutica por ATC nivel 4: avisa en línea, no interrumpe.</p>
+      <div class="viewport-desktop">
+        <div class="viewport-desktop__chrome">
+          <span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span>
+          <span class="viewport-desktop__url">receta.clinica.bo/nueva/medicacion</span>
+        </div>
+        <div class="viewport-desktop__body">
+          <div class="stack">
+            <ol class="steps">
+              <li class="steps__item steps__item--done">1 · Paciente</li>
+              <li class="steps__item steps__item--current">2 · Medicación</li>
+              <li class="steps__item">3 · Revisión</li>
+              <li class="steps__item">4 · Firma</li>
+            </ol>
+
+            <div class="card stack">
+              <div class="card__header" style="margin:0">
+                <h2 class="title-section">Ítem 1</h2>
+                <button class="btn btn--ghost">Quitar</button>
+              </div>
+              <div class="grid-2">
+                <div class="field">
+                  <label class="field__label" for="i1-ai">Principio activo <span class="field__required">*</span></label>
+                  <input class="field__control" id="i1-ai" value="ibuprofeno">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="i1-atc">Código ATC <span class="field__required">*</span></label>
+                  <input class="field__control mono" id="i1-atc" value="M01AE01">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="i1-str">Concentración <span class="field__required">*</span></label>
+                  <input class="field__control" id="i1-str" value="400 mg">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="i1-qty">Cantidad <span class="field__required">*</span></label>
+                  <input class="field__control" id="i1-qty" value="20">
+                </div>
+              </div>
+              <div class="field">
+                <label class="field__label" for="i1-dos">Posología <span class="field__required">*</span></label>
+                <input class="field__control" id="i1-dos" value="1 comprimido cada 8 horas por 5 días">
+              </div>
+            </div>
+
+            <div class="card stack">
+              <div class="card__header" style="margin:0">
+                <h2 class="title-section">Ítem 2</h2>
+                <button class="btn btn--ghost">Quitar</button>
+              </div>
+              <div class="grid-2">
+                <div class="field">
+                  <label class="field__label" for="i2-ai">Principio activo <span class="field__required">*</span></label>
+                  <input class="field__control" id="i2-ai" value="naproxeno">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="i2-atc">Código ATC <span class="field__required">*</span></label>
+                  <input class="field__control mono" id="i2-atc" value="M01AE02">
+                </div>
+              </div>
+
+              <div class="alert alert--warning">
+                <span class="alert__icon" aria-hidden="true">&#9888;</span>
+                <div>
+                  <p class="alert__title">Duplicidad terapéutica — severidad moderada</p>
+                  <p class="alert__body">
+                    <span class="mono">M01AE01</span> y <span class="mono">M01AE02</span> comparten el grupo ATC
+                    <span class="mono">M01AE</span>. Puede continuar sin justificar.
+                  </p>
+                  <p class="text-muted" style="margin:8px 0 0">
+                    Regla <span class="mono">DUPLICATE_THERAPY</span> · conjunto de reglas <span class="mono">v1.2.0</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="row row--between">
+              <button class="btn btn--secondary">Añadir otro ítem</button>
+              <button class="btn btn--primary">Revisar receta</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Toda alerta cita su evidencia y la versión de la regla que la produjo.</strong>
+        Sin eso, el médico no puede juzgar si la alerta merece atención, y en dos semanas las descarta todas por reflejo.
+        Contra la fatiga de alertas no se lucha bajando el número: se lucha haciéndolas auditables.
+      </div>
+      <div class="annotation annotation--pending">
+        <strong>D-07 sin resolver.</strong> No hay catálogo de medicamentos. Se prescribe por principio activo y ATC,
+        sin selección de producto comercial: la equivalencia queda a criterio del farmacéutico.
+      </div>
+    </section>
+
+    <!-- D4 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">D4</span><span class="frame__name">Alerta crítica — alergia declarada</span></div>
+      <p class="frame__note">Interrumpe y exige motivo escrito. Pero no bloquea: el médico decide.</p>
+      <div class="viewport-desktop">
+        <div class="viewport-desktop__chrome">
+          <span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span>
+          <span class="viewport-desktop__url">receta.clinica.bo/nueva/revision</span>
+        </div>
+        <div class="modal-backdrop">
+          <div class="modal stack">
+            <div class="row">
+              <span class="badge badge--danger">Severidad crítica</span>
+              <span class="text-muted"><span class="mono">DECLARED_ALLERGY</span> · reglas <span class="mono">v1.2.0</span></span>
+            </div>
+            <h2 class="title-screen">Alergia declarada al principio activo prescrito</h2>
+            <p class="text-secondary" style="margin:0">
+              El paciente tiene declarada alergia a <strong>penicilinas</strong> y el ítem 3 prescribe
+              <strong>amoxicilina</strong> (<span class="mono">J01CA04</span>), del mismo grupo.
+            </p>
+
+            <div class="field">
+              <label class="field__label" for="m-reason">
+                Si mantiene la prescripción, indique el motivo <span class="field__required">*</span>
+              </label>
+              <textarea class="field__control" id="m-reason" rows="3" placeholder="Escriba la justificación clínica"></textarea>
+              <span class="field__hint">Queda registrado junto a la receta, cifrado y fuera de la cadena.</span>
+            </div>
+
+            <div class="row row--end">
+              <button class="btn btn--secondary">Retirar el ítem</button>
+              <button class="btn btn--danger" disabled>Mantener bajo mi responsabilidad</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>El botón rojo nace deshabilitado y solo se activa al escribir el motivo.</strong>
+        La regla arquitectónica es que el motor nunca bloquea la emisión: la decisión terapéutica es del médico.
+        Lo que sí se exige es que quede escrita.
+      </div>
+      <div class="annotation annotation--pending">
+        <strong>D-15 y D-16 sin resolver.</strong> El MVP cubre alergias declaradas y duplicidad ATC.
+        No hay base de interacciones fármaco-fármaco ni umbrales acordados: no debe prometerse cobertura completa.
+      </div>
+    </section>
+
+    <!-- D5 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">D5</span><span class="frame__name">Firma EIP-712</span></div>
+      <p class="frame__note">Datos tipados en lenguaje natural. Nunca un hexadecimal que nadie lee.</p>
+      <div class="viewport-desktop">
+        <div class="viewport-desktop__chrome">
+          <span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span>
+          <span class="viewport-desktop__url">receta.clinica.bo/nueva/firma</span>
+        </div>
+        <div class="viewport-desktop__body">
+          <div class="stack">
+            <ol class="steps">
+              <li class="steps__item steps__item--done">1 · Paciente</li>
+              <li class="steps__item steps__item--done">2 · Medicación</li>
+              <li class="steps__item steps__item--done">3 · Revisión</li>
+              <li class="steps__item steps__item--current">4 · Firma</li>
+            </ol>
+
+            <div class="card stack">
+              <h2 class="title-section">Va a firmar esta receta</h2>
+              <dl class="kv">
+                <dt>Prescriptor</dt>
+                <dd>Dr. Roberto Méndez Salazar · matrícula <span class="mono">MED-7741-SC</span></dd>
+                <dt>Paciente</dt>
+                <dd>Lucía Vargas Antelo <span class="text-muted">(no se publica)</span></dd>
+                <dt>Emitida</dt>
+                <dd>11/09/2026 14:02</dd>
+                <dt>Caduca</dt>
+                <dd>11/10/2026 a medianoche</dd>
+                <dt>Ítems</dt>
+                <dd>3 medicamentos</dd>
+                <dt>Huella del contenido</dt>
+                <dd class="mono">0x9f2c41ab…7de0</dd>
+                <dt>Compromiso de paciente</dt>
+                <dd class="mono">0x4a81cc39…21b7</dd>
+              </dl>
+
+              <div class="alert alert--info">
+                <span class="alert__icon" aria-hidden="true">&#9432;</span>
+                <div>
+                  <p class="alert__title">La receta ya está cifrada en este equipo</p>
+                  <p class="alert__body">
+                    El contenido clínico se cifró antes de salir del navegador. A la cadena solo van las dos huellas
+                    de arriba, que no permiten reconstruir ni el nombre ni la medicación.
+                  </p>
+                </div>
+              </div>
+
+              <div class="row row--between">
+                <span class="badge badge--neutral">Firma ADSIB · pendiente de integración</span>
+                <button class="btn btn--primary btn--lg">Firmar con la passkey</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Se firma lo que se entiende.</strong> La estructura EIP-712 se muestra como frases, no como
+        una cadena hexadecimal. Un médico que firma algo que no puede leer no está consintiendo, está obedeciendo.
+      </div>
+      <div class="annotation annotation--pending">
+        <strong>D-17 sin resolver.</strong> La firma ADSIB está diseñada pero no implementada. El campo existe con
+        <code>status: "pending-integration"</code> y la interfaz lo declara tal cual. No se simula validez legal que no hay.
+      </div>
+    </section>
+
+    <!-- D6 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">D6</span><span class="frame__name">Receta emitida — entrega del QR</span></div>
+      <p class="frame__note">Confirmada en cadena, sin que el médico pague gas ni vea una transacción.</p>
+      <div class="viewport-desktop">
+        <div class="viewport-desktop__chrome">
+          <span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span>
+          <span class="viewport-desktop__url">receta.clinica.bo/receta/9f2c41ab</span>
+        </div>
+        <div class="viewport-desktop__body">
+          <div class="card stack" style="align-items:center;text-align:center">
+            <span class="badge badge--success">Registrada en cadena</span>
+            <h2 class="title-screen">Receta emitida</h2>
+            <p class="text-secondary" style="margin:0;max-width:46ch">
+              Entregue este código al paciente. La farmacia lo escanea para verificar y dispensar.
+            </p>
+
+            <div class="qr-frame"><div class="qr-fake" role="img" aria-label="Código QR de la receta"></div></div>
+
+            <dl class="kv" style="text-align:left;width:100%;max-width:420px">
+              <dt>Huella del contenido</dt><dd class="mono">0x9f2c41ab…7de0</dd>
+              <dt>Registro</dt><dd class="mono">0x7Ba3…19cE</dd>
+              <dt>Red</dt><dd>Base Sepolia <span class="mono">(84532)</span></dd>
+              <dt>Coste para usted</dt><dd><strong>0.00</strong> — patrocinado</dd>
+            </dl>
+
+            <div class="alert alert--warning" style="text-align:left">
+              <span class="alert__icon" aria-hidden="true">&#9888;</span>
+              <div>
+                <p class="alert__title">Quien tenga este código puede leer la receta</p>
+                <p class="alert__body">
+                  Trátelo como la receta de papel. La diferencia a favor: caduca sola y solo puede dispensarse
+                  una vez, aunque alguien la copie.
+                </p>
+              </div>
+            </div>
+
+            <div class="row">
+              <button class="btn btn--secondary">Imprimir</button>
+              <button class="btn btn--secondary">Descargar</button>
+              <button class="btn btn--ghost">Ver en el explorador</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation annotation--pending">
+        <strong>D-24 sin resolver, y es el hueco de privacidad más serio del MVP.</strong>
+        La clave de descifrado viaja sin envolver dentro del QR. Una foto del código es legible de forma indefinida.
+        El aviso de arriba es la mitigación honesta mientras no exista envoltura por destinatario.
+      </div>
+    </section>
+
+    <!-- D7 ================================================================ -->
+    <section class="frame">
+      <div class="frame__label"><span class="frame__num">D7</span><span class="frame__name">Mis recetas</span></div>
+      <p class="frame__note">Los cuatro estados visibles, incluida la caducidad, que se calcula en el cliente.</p>
+      <div class="viewport-desktop">
+        <div class="viewport-desktop__chrome">
+          <span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span><span class="viewport-desktop__dot"></span>
+          <span class="viewport-desktop__url">receta.clinica.bo/mis-recetas</span>
+        </div>
+        <div class="viewport-desktop__body">
+          <div class="stack">
+            <div class="row row--between">
+              <h2 class="title-screen">Mis recetas</h2>
+              <button class="btn btn--primary">Nueva receta</button>
+            </div>
+
+            <div class="card stack stack--tight">
+              <div class="row row--between">
+                <span class="mono">0x9f2c41ab…7de0</span>
+                <span class="badge badge--info">Emitida</span>
+              </div>
+              <p class="text-muted" style="margin:0">11/09/2026 · caduca 11/10/2026 · 3 ítems</p>
+              <div class="row row--end"><button class="btn btn--ghost">Cancelar receta</button></div>
+            </div>
+
+            <div class="card stack stack--tight">
+              <div class="row row--between">
+                <span class="mono">0x2b81df04…c134</span>
+                <span class="badge badge--success">Dispensada</span>
+              </div>
+              <p class="text-muted" style="margin:0">
+                Entregada el 10/09/2026 por <span class="mono">0x51Ae…8837</span> · sin acciones disponibles
+              </p>
+            </div>
+
+            <div class="card stack stack--tight">
+              <div class="row row--between">
+                <span class="mono">0x7c04ea91…3390</span>
+                <span class="badge badge--neutral">Caducada</span>
+              </div>
+              <p class="text-muted" style="margin:0">Venció el 02/09/2026 sin dispensarse</p>
+            </div>
+
+            <div class="card stack stack--tight">
+              <div class="row row--between">
+                <span class="mono">0xe530b7a2…4f18</span>
+                <span class="badge badge--danger">Cancelada</span>
+              </div>
+              <p class="text-muted" style="margin:0">Anulada por usted el 08/09/2026</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>«Dispensada» no tiene ni un solo botón. Eso es intencional.</strong>
+        El contrato no expone reapertura: ni administrativa, ni de emergencia, ni con multifirma. Si la interfaz
+        insinuara que existe un camino de vuelta, estaría mintiendo sobre la propiedad que sostiene el proyecto.
+      </div>
+      <div class="annotation">
+        <strong>«Caducada» no viene del enum del contrato.</strong> El estado almacenado sigue siendo
+        <code>Issued</code>; la caducidad se deriva comparando <code>expiresAt</code> con la hora del bloque.
+        La app la calcula, no la lee.
+      </div>
+    </section>
+
+  </div>
+</div>
+</body>
+</html>
