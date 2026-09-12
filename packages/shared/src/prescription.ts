@@ -88,6 +88,23 @@ export const prescriptionPractitionerSchema = z.object({
   fullName: z.string().min(1),
 });
 
+/** A written motive for overriding a critical clinical alert (D4). Free text:
+ * it travels ONLY inside the encrypted envelope, never in the EIP-712 message,
+ * the `issue()` arguments or the QR. `recordedAt` is ISO 8601. */
+export interface PrescriptionJustification {
+  code: string;
+  severity: string;
+  text: string;
+  recordedAt: string;
+}
+
+export const prescriptionJustificationSchema = z.object({
+  code: z.string().min(1),
+  severity: z.string().min(1),
+  text: z.string().min(1),
+  recordedAt: z.string().datetime(),
+});
+
 /**
  * The plaintext prescription document, exactly as it looks once decrypted
  * (docs/03-modelo-de-datos.md). This object NEVER leaves the client unencrypted.
@@ -105,6 +122,9 @@ export interface PrescriptionDocument {
   issuedAt: string;
   /** ISO 8601 timestamp. Midnight of the expiry day (D-13). */
   expiresAt: string;
+  /** Motives for overridden critical alerts (D4). OPTIONAL on purpose: sealed
+   * documents that predate it must still validate, and so must the pharmacy's. */
+  justifications?: PrescriptionJustification[];
 }
 
 export const prescriptionDocumentSchema = z.object({
@@ -114,6 +134,7 @@ export const prescriptionDocumentSchema = z.object({
   items: z.array(prescriptionItemSchema).min(1),
   issuedAt: z.string().datetime(),
   expiresAt: z.string().datetime(),
+  justifications: z.array(prescriptionJustificationSchema).optional(),
 });
 
 /**
