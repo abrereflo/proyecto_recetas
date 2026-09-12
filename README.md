@@ -1,7 +1,7 @@
 # proyecto_recetas
 Blockchain Solutions for Secure E-Prescription Systems
 
-A verifiable e-prescription system built on an Ethereum L2 (Base Sepolia). Doctors sign prescriptions with a passkey — no wallet, no seed phrase, no ETH — thanks to ERC-4337 smart accounts and a sponsoring paymaster. Pharmacies scan a QR code, verify the prescriber's credential on-chain through the Ethereum Attestation Service, and dispense. A second attempt to dispense the same prescription reverts. Clinical content stays encrypted off-chain; only a content hash and a per-prescription salted commitment go on-chain.
+A verifiable e-prescription system built on Avalanche Fuji (chainId 43113), the testnet of Avalanche's EVM-compatible C-Chain. Avalanche is an independent L1, not an Ethereum L2; what the project borrows from Ethereum are its standards, which run on any EVM. Doctors sign prescriptions with a passkey — no wallet, no seed phrase, no AVAX — thanks to ERC-4337 smart accounts and a sponsoring paymaster. Pharmacies scan a QR code, verify the prescriber's credential on-chain through the Ethereum Attestation Service, and dispense. A second attempt to dispense the same prescription reverts. Clinical content stays encrypted off-chain; only a content hash and a per-prescription salted commitment go on-chain.
 
 Built for an Ethereum buildathon in Cochabamba, Bolivia.
 
@@ -57,14 +57,30 @@ Health check: `curl http://localhost:3000/health`.
 
 ### Contracts
 
-`forge-std` is not vendored, so install it once:
+Dependencies are not vendored (`contracts/lib/` is gitignored), so install them
+once. `--no-git` keeps them out of the index: this repository tracks no
+submodules.
 
 ```bash
 cd contracts
 forge install foundry-rs/forge-std --no-git
+forge install ethereum-attestation-service/eas-contracts@v1.2.0 --no-git
+forge install OpenZeppelin/openzeppelin-contracts@v4.9.3 --no-git
 forge build
 forge test -vvv
 ```
+
+EAS v1.2.0 is the release `src/IEAS.sol` was transcribed from, and OpenZeppelin
+4.9.3 is what EAS itself depends on. Both are needed only by
+`script/DeployEAS.s.sol` and `script/RegisterSchemas.s.sol`, because Avalanche
+has no official EAS deployment and this project therefore deploys its own.
+
+> **Two compilers, on purpose.** EAS v1.2.0 pins `pragma solidity 0.8.19` while
+> everything this project writes is pinned to 0.8.24. A file and its imports
+> must share one compiler, so `foundry.toml` uses per-path
+> `compilation_restrictions` instead of one global `solc_version`, and the two
+> EAS scripts are `^0.8.19` and never import `LocalDemo.sol`. The bytecode of
+> `PrescriptionRegistry` is unchanged by this.
 
 The test that backs the pitch is `test_dispense_twice_reverts`. If it fails, there is no project.
 
@@ -85,6 +101,31 @@ Ethereum Attestation Service of its own. Off that chain it refuses to run
 without `EAS_ADDRESS`, `PRACTITIONER_SCHEMA_UID`, `PHARMACY_SCHEMA_UID` and
 `ISSUER_AUTHORITY`: a registry deployed with those at zero can never accredit
 anyone.
+
+On Avalanche Fuji those four values do not come from the network — **there is no
+official EAS deployment on Avalanche**, so the project deploys its own EAS
+v1.2.0 first and the three scripts run in order:
+
+```bash
+# 1. SchemaRegistry, then EAS(schemaRegistry). Prints both addresses.
+#    Refuses to run on chainId 31337, where MockEAS already exists.
+forge script script/DeployEAS.s.sol --rpc-url fuji --broadcast
+
+# 2. The two credential schemas. Prints their uids. Idempotent.
+SCHEMA_REGISTRY_ADDRESS=0x... \
+forge script script/RegisterSchemas.s.sol --rpc-url fuji --broadcast
+
+# 3. The registry itself.
+EAS_ADDRESS=0x... PRACTITIONER_SCHEMA_UID=0x... PHARMACY_SCHEMA_UID=0x... \
+ISSUER_AUTHORITY=0x... \
+forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify
+```
+
+Those schema uids are **not** the ones `LocalDemo.sol` uses on Anvil: the real
+`SchemaRegistry` derives a uid from
+`keccak256(abi.encodePacked(schema, resolver, revocable))`, while the local
+stand-ins hash the declaration. Only the ones `RegisterSchemas.s.sol` prints are
+valid on a public network. See [docs/19](docs/19-despliegue.md).
 
 `SetupCredentials.s.sol` then accredits the three demo accounts — the authority
 attests in EAS, and each account registers the pointer itself. Nobody issues or
@@ -159,7 +200,8 @@ These come from the architecture documents and a review that finds one violated 
 
 | Gap | Decision |
 |---|---|
-| EAS credential checks: `_isAccreditedPractitioner` and `_isAccreditedPharmacy` accept everyone | docs/04 — acceptable on Anvil, must never reach Base Sepolia |
+| EAS on Avalanche Fuji: the credential checks are live — `_isAccreditedPractitioner` and `_isAccreditedPharmacy` re-read the attestation on every call — and `DeployEAS.s.sol` / `RegisterSchemas.s.sol` exist and build, but neither has been run against Fuji yet, so the wired-up EAS address and schema uids are still Anvil-only | docs/19 — run both scripts on Fuji with a funded deployer, then copy the printed addresses and uids into the deployment |
+| Contract verification on Fuji: configured against Routescan because Fuji is a paid tier on Etherscan V2, but the endpoint has never been exercised | docs/19 — confirm on the first Fuji deployment and correct `contracts/foundry.toml` if it differs |
 | ERC-4337 account abstraction; `permissionless.js` is not installed | docs/01, docs/08 |
 | DEK wrapping per recipient; the key travels unwrapped in the QR | D-24, [docs/05](docs/05-almacenamiento-y-cifrado.md) |
 | Drug-drug interactions; the MVP covers declared allergies and ATC duplication only | D-15, [docs/06](docs/06-validacion-clinica.md) |

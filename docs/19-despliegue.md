@@ -1,6 +1,6 @@
 # 19 — Despliegue en producción
 
-El backend y las dos SPA se despliegan como contenedores en un droplet ya existente, detrás de un Traefik que también ya existe. Este documento describe esa topología, el pipeline de CI/CD que la alimenta y las restricciones de capacidad que gobiernan cada decisión de memoria. La sección [08](08-stack-y-entorno.md) cubre el despliegue de los *contratos* (Foundry, `forge script`); este documento cubre el despliegue de la *aplicación* (API, SPA, Postgres).
+El backend y las dos SPA se despliegan como contenedores en un droplet ya existente, detrás de un Traefik que también ya existe. Este documento describe esa topología, el pipeline de CI/CD que la alimenta y las restricciones de capacidad que gobiernan cada decisión de memoria. La sección [08](08-stack-y-entorno.md) cubre el stack de *contratos* (Foundry, `forge script`); este documento cubre el despliegue de la *aplicación* (API, SPA, Postgres), más el procedimiento on-chain del que esa aplicación depende para arrancar: desde la migración a Avalanche Fuji, EAS ya no viene dado por la red y hay que desplegarlo, así que ese paso se documenta aquí abajo antes que la topología de servicios.
 
 > **Estado: no hay despliegue en producción todavía.** Este documento describe el procedimiento tal como quedó preparado (imágenes, compose, pipeline), no un sistema ya verificado en vivo. Antes de la primera ejecución real, revisar la sección "Restricción de capacidad" y confirmar que el swap del droplet está configurado.
 
@@ -13,7 +13,45 @@ El backend y las dos SPA se despliegan como contenedores en un droplet ya existe
 | SPA de farmacia (imagen `recetas-pharmacy`) | Bundler o paymaster propios — pendientes de proveedor ([D-02](01-arquitectura.md)) |
 | Postgres (payload cifrado, [D-08](05-almacenamiento-y-cifrado.md)) | Migración de esquema automática hacia atrás — un rollback nunca revierte `drizzle-kit push` |
 
-La red de producción es **Base Sepolia, chainId 84532**. No existe ninguna ruta de despliegue que apunte a Anvil (chainId 31337): ese valor solo aparece en `docker-compose.yml`, el compose de desarrollo.
+La red de producción es **Avalanche Fuji, chainId 43113**. No existe ninguna ruta de despliegue que apunte a Anvil (chainId 31337): ese valor solo aparece en `docker-compose.yml`, el compose de desarrollo.
+
+### EAS es un despliegue propio, no la instancia canónica
+
+Avalanche **no tiene un despliegue oficial de EAS**: el repositorio `ethereum-attestation-service/eas-contracts` publica `deployments/` para 26 redes y ninguna es Avalanche. No hay dirección canónica ni predeploy que asumir, así que el proyecto despliega su propia instancia de **EAS v1.2.0** —la misma versión de la que está transcrito `contracts/src/IEAS.sol`— y las direcciones resultantes son un dato de *este* despliegue que hay que anotar y configurar.
+
+El orden importa y no es una preferencia: `EAS` recibe el `SchemaRegistry` en el constructor y revierte con la dirección cero, así que el registro va primero y queda inmutable dentro de EAS. Cambiar de `SchemaRegistry` más tarde obliga a desplegar un `EAS` nuevo.
+
+```bash
+# 1. EAS propio. Imprime SchemaRegistry y EAS; se niega a correr en chainId 31337,
+#    donde la demo local ya usa MockEAS.
+forge script script/DeployEAS.s.sol --rpc-url fuji --broadcast
+
+# 2. Los dos esquemas de credencial. Imprime sus uids. Es idempotente: si ya
+#    estaban registrados, los informa en vez de abortar.
+SCHEMA_REGISTRY_ADDRESS=0x... \
+forge script script/RegisterSchemas.s.sol --rpc-url fuji --broadcast
+
+# 3. El registro, con EAS y los dos uids como argumentos de constructor.
+EAS_ADDRESS=0x... PRACTITIONER_SCHEMA_UID=0x... PHARMACY_SCHEMA_UID=0x... \
+ISSUER_AUTHORITY=0x... \
+forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify
+```
+
+> **Los uids de los esquemas no son los de la demo local.** `contracts/script/LocalDemo.sol` usa `keccak256(declaración)` como stand-in sobre Anvil; el `SchemaRegistry` real deriva el uid de `keccak256(abi.encodePacked(schema, resolver, revocable))`. Son números distintos. Los únicos válidos en una red pública son los que imprime `RegisterSchemas.s.sol`, y son los que entran en `PRACTITIONER_SCHEMA_UID` y `PHARMACY_SCHEMA_UID`. Poner los locales por error produce un registro cuyas comprobaciones de credencial no pueden pasar nunca.
+
+Tras desplegar, confirmar que `EAS.version()` y `SchemaRegistry.version()` devuelven `1.2.0`, y que `EAS.getSchemaRegistry()` apunta al registro desplegado junto a ella. Es la comprobación barata de que lo desplegado es lo esperado.
+
+### Verificación de contratos en el explorador
+
+El explorador de Fuji es `https://testnet.snowtrace.io`. **Avalanche Fuji es de tier pago en Etherscan V2**, así que la key gratuita de Etherscan no verifica aquí. `contracts/foundry.toml` apunta la verificación a **Routescan**, que expone una API compatible con Etherscan y acepta la cadena literal `verifyContract` como key:
+
+```bash
+forge verify-contract <address> <contract> --chain 43113 \
+  --verifier-url 'https://api.routescan.io/v2/network/testnet/evm/43113/etherscan' \
+  --etherscan-api-key verifyContract
+```
+
+> `PENDIENTE DE COMPROBACIÓN EMPÍRICA.` Ese endpoint no se ha ejercitado todavía. Confirmarlo en el primer despliegue en Fuji y corregir `contracts/foundry.toml` si difiere. No damos por buena la verificación hasta verla funcionar.
 
 ## Topología de servicios
 
@@ -69,8 +107,8 @@ Los tres jobs de construcción usan `docker/setup-buildx-action@v3` antes de `do
 | `VPS_USER` | Secret | Igual | Usuario SSH (`devrafaseros`) |
 | `VPS_SSH_KEY` | Secret | Igual | Clave privada SSH con acceso al droplet |
 | `VITE_API_URL` | Variable | Settings → Secrets and variables → Actions → Variables | Base URL del API que consume el navegador |
-| `VITE_RPC_URL` | Variable | Igual | Endpoint RPC de Base Sepolia |
-| `VITE_CHAIN_ID` | Variable | Igual | `84532` |
+| `VITE_RPC_URL` | Variable | Igual | Endpoint RPC de Avalanche Fuji |
+| `VITE_CHAIN_ID` | Variable | Igual | `43113` |
 | `VITE_PRESCRIPTION_REGISTRY_ADDRESS` | Variable | Igual | Dirección del contrato desplegado |
 
 No hay ningún secreto para GHCR en esa lista, y no hace falta crearlo: el namespace se deriva del propio repositorio en tiempo de ejecución (`github.repository_owner`), así que un fork o un cambio de dueño publica donde corresponde sin editar el workflow.

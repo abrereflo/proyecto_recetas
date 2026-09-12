@@ -4,7 +4,6 @@ out = "out"
 test = "test"
 script = "script"
 libs = ["lib"]
-solc_version = "0.8.24"
 evm_version = "cancun"
 optimizer = true
 optimizer_runs = 200
@@ -13,6 +12,33 @@ bytecode_hash = "none"
 # Warnings are not tolerated in a contract that anchors clinical records.
 deny_warnings = false
 fs_permissions = [{ access = "read", path = "./out" }]
+
+# Two compilers, on purpose. Everything this project writes is pinned to
+# 0.8.24, exactly as the former `solc_version` key did, because a floating
+# compiler means a contract that anchors clinical records cannot be rebuilt
+# byte for byte. EAS v1.2.0 pins `pragma solidity 0.8.19` in `EAS.sol` and
+# `SchemaRegistry.sol`, so a single global pin cannot compile both; a file and
+# its imports must share one compiler, which is also why DeployEAS.s.sol and
+# RegisterSchemas.s.sol are `^0.8.19` and never import `LocalDemo.sol`.
+[[profile.default.compilation_restrictions]]
+paths = "src/**"
+version = "=0.8.24"
+
+[[profile.default.compilation_restrictions]]
+paths = "test/**"
+version = "=0.8.24"
+
+[[profile.default.compilation_restrictions]]
+paths = "script/Deploy.s.sol"
+version = "=0.8.24"
+
+[[profile.default.compilation_restrictions]]
+paths = "script/LocalDemo.sol"
+version = "=0.8.24"
+
+[[profile.default.compilation_restrictions]]
+paths = "script/SetupCredentials.s.sol"
+version = "=0.8.24"
 
 [profile.ci]
 verbosity = 3
@@ -35,7 +61,19 @@ int_types = "long"
 
 [rpc_endpoints]
 anvil = "${RPC_URL}"
-base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
+fuji = "${FUJI_RPC_URL}"
 
+# Avalanche Fuji is a paid tier on Etherscan V2, so the free Etherscan key does
+# NOT verify here. Verification goes through Routescan, which exposes an
+# Etherscan-compatible API and takes the literal string "verifyContract" as its
+# key. The equivalent explicit invocation, for when the table below is not
+# picked up, is:
+#
+#   forge verify-contract <address> <contract> --chain 43113 \
+#     --verifier-url 'https://api.routescan.io/v2/network/testnet/evm/43113/etherscan' \
+#     --etherscan-api-key verifyContract
+#
+# PENDIENTE DE COMPROBACION EMPIRICA: this endpoint has not been exercised yet.
+# Confirm it on the first Fuji deployment and correct it here if it differs.
 [etherscan]
-base_sepolia = { key = "${BASESCAN_API_KEY}", chain = 84532 }
+fuji = { key = "${ROUTESCAN_API_KEY}", chain = 43113, url = "https://api.routescan.io/v2/network/testnet/evm/43113/etherscan" }
