@@ -10,7 +10,7 @@ import {
 } from '@recetas/crypto';
 import { QR_PAYLOAD_VERSION, encodeQrPayload, type QrPayload } from '@recetas/shared';
 import { accountOf, assertChainReachable, buildPublicClient, buildWalletClient } from '../chain';
-import { ANVIL_ACCOUNTS, type CliConfig } from '../config';
+import { doctorAccount, type CliConfig } from '../config';
 import { buildMessage, describeMessage, signPrescription } from '../eip712';
 import { formatDay, isoToSeconds, shortAddress } from '../format';
 import { buildDraft, type DraftOptions } from '../prescription-draft';
@@ -44,14 +44,15 @@ const TOTAL_STEPS = 6;
 
 export async function runIssue(config: CliConfig, options: IssueOptions): Promise<IssueOutcome> {
   const publicClient = buildPublicClient(config);
-  const doctor = accountOf(ANVIL_ACCOUNTS.doctor.privateKey);
-  const walletClient = buildWalletClient(config, ANVIL_ACCOUNTS.doctor.privateKey);
+  const prescriber = doctorAccount(config);
+  const doctor = accountOf(prescriber.privateKey);
+  const walletClient = buildWalletClient(config, prescriber.privateKey);
 
   await assertChainReachable(publicClient, config.rpcUrl);
   await assertStoreReachable(config);
 
   ui.heading('EMISIÓN DE RECETA — consultorio');
-  ui.info('Médico', `${ANVIL_ACCOUNTS.doctor.label} · ${shortAddress(doctor.address)}`);
+  ui.info('Médico', `${prescriber.label} · ${shortAddress(doctor.address)}`);
 
   // 1. The clinical document. It never leaves this process in the clear.
   const salt = generateSalt();

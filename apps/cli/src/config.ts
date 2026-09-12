@@ -126,6 +126,44 @@ export interface DemoActor {
   privateKey: Hex;
 }
 
-export function pharmacyAccount(key: PharmacyKey): DemoActor {
+/**
+ * Chain ids where the checked-in keys above are safe to use: Anvil's default
+ * and the legacy development id.
+ */
+export const LOCAL_CHAIN_IDS: readonly number[] = [31337, 1337];
+
+export function isLocalChain(chainId: number): boolean {
+  return LOCAL_CHAIN_IDS.includes(chainId);
+}
+
+/**
+ * The gate in front of every checked-in private key.
+ *
+ * The comment at the top of this file states the rule; this function is what
+ * enforces it. `assertLocalEas` already refuses to attest or revoke against a
+ * real EAS, but it never covered `issue` and `dispense`, which are the two
+ * commands that sign. Pointing `CHAIN_ID` at Base Sepolia — the documented next
+ * step of the project — would otherwise sign real public-network transactions
+ * with keys that ship inside every Foundry installation.
+ */
+function assertLocalChain(config: CliConfig, action: string): void {
+  if (isLocalChain(config.chainId)) return;
+
+  throw new Error(
+    `Se intentó ${action} en la red ${config.chainId} con una clave de demostración.\n` +
+      'Las claves incluidas en el repositorio son las cuentas públicas de Anvil: ' +
+      'cualquiera las tiene, así que fuera de una cadena local no son un secreto.\n' +
+      `Redes permitidas: ${LOCAL_CHAIN_IDS.join(', ')}.\n` +
+      'Para operar en una red pública, configure una cuenta propia; no reutilice estas claves.',
+  );
+}
+
+export function doctorAccount(config: CliConfig): DemoActor {
+  assertLocalChain(config, 'emitir una receta');
+  return ANVIL_ACCOUNTS.doctor;
+}
+
+export function pharmacyAccount(key: PharmacyKey, config: CliConfig): DemoActor {
+  assertLocalChain(config, 'dispensar una receta');
   return key === 'a' ? ANVIL_ACCOUNTS.pharmacyA : ANVIL_ACCOUNTS.pharmacyB;
 }
