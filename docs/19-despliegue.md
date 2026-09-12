@@ -20,9 +20,11 @@ La red de producción es **Base Sepolia, chainId 84532**. No existe ninguna ruta
 | Servicio | Imagen | Puerto interno | Expuesto por Traefik | Alcance |
 |---|---|---|---|---|
 | `db` | `postgres:16-alpine` | 5432 | No | Interno — solo `api` lo alcanza |
-| `api` | `ghcr.io/rafaseros/recetas-api` | 3000 | Sí — `recetas.devrafaseros.com/api` | Público |
-| `doctor` | `ghcr.io/rafaseros/recetas-doctor` | 80 (nginx) | Sí — `recetas.devrafaseros.com` | Público |
-| `pharmacy` | `ghcr.io/rafaseros/recetas-pharmacy` | 80 (nginx) | Sí — `farmacia.devrafaseros.com` | Público |
+| `api` | `ghcr.io/$GHCR_OWNER/recetas-api` | 3000 | Sí — `recetas.devrafaseros.com/api` | Público |
+| `doctor` | `ghcr.io/$GHCR_OWNER/recetas-doctor` | 80 (nginx) | Sí — `recetas.devrafaseros.com` | Público |
+| `pharmacy` | `ghcr.io/$GHCR_OWNER/recetas-pharmacy` | 80 (nginx) | Sí — `farmacia.devrafaseros.com` | Público |
+
+> **El namespace de las imágenes no está fijo en ningún archivo.** `$GHCR_OWNER` es la cuenta de GitHub dueña del repositorio: GHCR registra cada paquete bajo el dueño del repositorio que lo publicó, y el `GITHUB_TOKEN` de los jobs de CI solo puede escribir dentro de ese namespace. Publicar bajo otro termina en `denied: permission_denied: The requested installation does not exist`, después de construir la imagen entera. En CI el valor sale de `github.repository_owner` (pasado a minúsculas, que es lo único que GHCR acepta); en el droplet sale de `GHCR_OWNER` en el `.env`. Hoy vale `abrereflo`.
 
 `db` no publica ningún puerto al host y no está en la red `traefik-public`: es inalcanzable desde fuera del droplet y desde cualquier otra aplicación que corra en él.
 
@@ -50,7 +52,7 @@ Traefik obtiene los certificados TLS de ambos hostnames mediante el resolver ACM
 | Job | Cuándo corre | Qué hace |
 |---|---|---|
 | `test` | Push y PR | `pnpm install --frozen-lockfile`, `pnpm -r typecheck`, `pnpm -r test` |
-| `build-api` | Solo push a `main`, tras `test` | Construye y publica `recetas-api:latest` y `recetas-api:sha-<sha>` en GHCR |
+| `build-api` | Solo push a `main`, tras `test` | Resuelve el namespace de GHCR, construye y publica `recetas-api:latest` y `recetas-api:sha-<sha>` |
 | `build-doctor` | Solo push a `main`, tras `test` | Igual que arriba, más los `VITE_*` como build args |
 | `build-pharmacy` | Solo push a `main`, tras `test` | Igual que `build-doctor` |
 | `deploy` | Solo push a `main`, tras los tres builds | Conecta por SSH al droplet y despliega |
@@ -71,6 +73,8 @@ Los tres jobs de construcción usan `docker/setup-buildx-action@v3` antes de `do
 | `VITE_CHAIN_ID` | Variable | Igual | `84532` |
 | `VITE_PRESCRIPTION_REGISTRY_ADDRESS` | Variable | Igual | Dirección del contrato desplegado |
 
+No hay ningún secreto para GHCR en esa lista, y no hace falta crearlo: el namespace se deriva del propio repositorio en tiempo de ejecución (`github.repository_owner`), así que un fork o un cambio de dueño publica donde corresponde sin editar el workflow.
+
 `secrets.GITHUB_TOKEN` es automático (no se crea a mano): sirve tanto para autenticar contra GHCR en los jobs de build como, reenviado a la sesión SSH como `GHCR_TOKEN`, para que el droplet haga `docker login ghcr.io` sin guardar una credencial propia.
 
 ## Puesta en marcha inicial en el droplet
@@ -84,9 +88,11 @@ cd /opt/docker/apps/recetas
 
 git clone <url-del-repositorio> .
 
-cp .env.production.example .env
+cp env.production.example .env
 chmod 600 .env
 # Completar cada CHANGE_ME de .env — ver la sección "Variables de entorno".
+# Y confirmar que GHCR_OWNER es el dueño del repositorio en GitHub: sin esa
+# variable, `docker compose pull` aborta antes de contactar al registro.
 
 docker network inspect traefik-public >/dev/null 2>&1 \
   && echo "traefik-public existe" \
@@ -122,12 +128,15 @@ free -h
 | `POSTGRES_PASSWORD` | Secreto | `.env` en el droplet |
 | `PRESCRIPTION_REGISTRY_ADDRESS`, `EAS_ADDRESS`, `PRACTITIONER_SCHEMA_UID`, `PHARMACY_SCHEMA_UID`, `ISSUER_AUTHORITY` | Secreto (específicos del despliegue) | `.env` en el droplet |
 | `POSTGRES_DB`, `POSTGRES_USER`, `API_HOST`, `API_PORT`, `NODE_ENV`, `LOG_LEVEL`, `CHAIN_ID`, `RPC_URL` | Configuración | `.env` en el droplet |
+| `GHCR_OWNER` | Configuración | `.env` en el droplet |
 | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` | Secreto | GitHub Actions Secrets |
 | `VITE_API_URL`, `VITE_RPC_URL`, `VITE_CHAIN_ID`, `VITE_PRESCRIPTION_REGISTRY_ADDRESS` | Configuración de build | GitHub Actions Variables |
 
 > Los `VITE_*` son el caso particular de este proyecto frente a `sigdoc`: no se leen en tiempo de ejecución ni viven en el `.env` del droplet. Vite los incrusta en el JavaScript construido durante `docker build`, en CI (ver `docker/Dockerfile.doctor.prod` y `docker/Dockerfile.pharmacy.prod`). Cambiar uno significa reconstruir y redesplegar la imagen, nunca editar un contenedor en marcha.
 
-`.env.production.example`, en la raíz del repositorio, documenta cada variable de `.env` con su placeholder `CHANGE_ME`.
+> `GHCR_OWNER` es la única variable de `.env` que `docker-compose.prod.yml` exige sin valor por defecto. Un droplet que ya estuviera desplegado antes de que las imágenes dejaran de tener el namespace fijo tiene que agregarla a su `.env` **antes** del próximo despliegue; si falta, `docker compose pull` falla de inmediato nombrando la variable y los contenedores en marcha siguen intactos.
+
+`env.production.example`, en la raíz del repositorio, documenta cada variable de `.env` con su placeholder `CHANGE_ME`.
 
 ## Rollback
 

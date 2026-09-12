@@ -131,6 +131,29 @@ jobs:
       packages: write
 
     steps:
+      # The images MUST be published under the owner of this repository:
+      # GITHUB_TOKEN can only write packages in its own owner's namespace, and
+      # pushing anywhere else fails with `denied: permission_denied: The
+      # requested installation does not exist` — after a full, wasted build.
+      #
+      # `github.repository_owner` preserves the account's capitalization, and
+      # GHCR rejects any uppercase letter in a namespace. Actions expressions
+      # have no lowercase function, so the fold has to happen in a shell step.
+      # $GITHUB_ENV publishes the result to every later step of this job, so
+      # the namespace is computed once instead of being spelled into each tag.
+      #
+      # The owner is passed through `env:` rather than interpolated into the
+      # script, the same rule the check-vite-vars job follows: `${{ }}` inside
+      # `run:` is substituted as shell source before bash ever sees it.
+      - name: Resolve the GHCR namespace
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          namespace=$(printf '%s' "$REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "GHCR_NAMESPACE=${namespace}" >> "$GITHUB_ENV"
+          echo "Publishing images under ghcr.io/${namespace}"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -153,8 +176,8 @@ jobs:
           file: docker/Dockerfile.api.prod
           push: true
           tags: |
-            ghcr.io/rafaseros/recetas-api:latest
-            ghcr.io/rafaseros/recetas-api:sha-${{ github.sha }}
+            ghcr.io/${{ env.GHCR_NAMESPACE }}/recetas-api:latest
+            ghcr.io/${{ env.GHCR_NAMESPACE }}/recetas-api:sha-${{ github.sha }}
           cache-from: type=gha,scope=recetas-api
           cache-to: type=gha,mode=max,scope=recetas-api
 
@@ -170,6 +193,17 @@ jobs:
       packages: write
 
     steps:
+      # Same namespace resolution as build-api — $GITHUB_ENV is job-scoped, so
+      # each build job computes it for itself. See the comment there.
+      - name: Resolve the GHCR namespace
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          namespace=$(printf '%s' "$REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "GHCR_NAMESPACE=${namespace}" >> "$GITHUB_ENV"
+          echo "Publishing images under ghcr.io/${namespace}"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -200,8 +234,8 @@ jobs:
             VITE_CHAIN_ID=${{ vars.VITE_CHAIN_ID }}
             VITE_PRESCRIPTION_REGISTRY_ADDRESS=${{ vars.VITE_PRESCRIPTION_REGISTRY_ADDRESS }}
           tags: |
-            ghcr.io/rafaseros/recetas-doctor:latest
-            ghcr.io/rafaseros/recetas-doctor:sha-${{ github.sha }}
+            ghcr.io/${{ env.GHCR_NAMESPACE }}/recetas-doctor:latest
+            ghcr.io/${{ env.GHCR_NAMESPACE }}/recetas-doctor:sha-${{ github.sha }}
           cache-from: type=gha,scope=recetas-doctor
           cache-to: type=gha,mode=max,scope=recetas-doctor
 
@@ -215,6 +249,17 @@ jobs:
       packages: write
 
     steps:
+      # Same namespace resolution as build-api — $GITHUB_ENV is job-scoped, so
+      # each build job computes it for itself. See the comment there.
+      - name: Resolve the GHCR namespace
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          namespace=$(printf '%s' "$REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "GHCR_NAMESPACE=${namespace}" >> "$GITHUB_ENV"
+          echo "Publishing images under ghcr.io/${namespace}"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -241,8 +286,8 @@ jobs:
             VITE_CHAIN_ID=${{ vars.VITE_CHAIN_ID }}
             VITE_PRESCRIPTION_REGISTRY_ADDRESS=${{ vars.VITE_PRESCRIPTION_REGISTRY_ADDRESS }}
           tags: |
-            ghcr.io/rafaseros/recetas-pharmacy:latest
-            ghcr.io/rafaseros/recetas-pharmacy:sha-${{ github.sha }}
+            ghcr.io/${{ env.GHCR_NAMESPACE }}/recetas-pharmacy:latest
+            ghcr.io/${{ env.GHCR_NAMESPACE }}/recetas-pharmacy:sha-${{ github.sha }}
           cache-from: type=gha,scope=recetas-pharmacy
           cache-to: type=gha,mode=max,scope=recetas-pharmacy
 
@@ -279,7 +324,7 @@ jobs:
             # rolled back to any prior commit (see docs/19-despliegue.md).
             # docker-compose.prod.yml resolves the running tag from
             # ${RECETAS_IMAGE_TAG:-latest}; the build jobs above push
-            # ghcr.io/rafaseros/recetas-{api,doctor,pharmacy}:sha-<gitsha>.
+            # ghcr.io/<repository owner>/recetas-{api,doctor,pharmacy}:sha-<gitsha>.
             export RECETAS_IMAGE_TAG="sha-${{ github.sha }}"
 
             # Pull latest compose files and config (images themselves come from GHCR)

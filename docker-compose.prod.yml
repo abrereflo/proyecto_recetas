@@ -50,7 +50,12 @@ services:
     # (sha-<gitsha>, pushed by the CI build jobs) so the running image is
     # reproducible and rollback-able. The :-latest default preserves the prior
     # behavior for any manual `docker compose` invocation with the var unset.
-    image: ghcr.io/rafaseros/recetas-api:${RECETAS_IMAGE_TAG:-latest}
+    # GHCR_OWNER is the GitHub account that owns this repository and therefore
+    # owns the packages CI publishes: GITHUB_TOKEN can only write under its own
+    # owner's namespace. Required with no default on purpose — an unset
+    # variable would expand to the empty string and build `ghcr.io//recetas-api`,
+    # which fails at the registry with an error that names nothing.
+    image: "ghcr.io/${GHCR_OWNER:?GHCR_OWNER is required (the GitHub account that owns this repository), e.g. abrereflo}/recetas-api:${RECETAS_IMAGE_TAG:-latest}"
     container_name: recetas-api
     restart: unless-stopped
     mem_limit: 320m
@@ -96,7 +101,7 @@ services:
       - "traefik.http.services.recetas-api.loadbalancer.server.port=3000"
 
   doctor:
-    image: ghcr.io/rafaseros/recetas-doctor:${RECETAS_IMAGE_TAG:-latest}
+    image: "ghcr.io/${GHCR_OWNER:?GHCR_OWNER is required (the GitHub account that owns this repository), e.g. abrereflo}/recetas-doctor:${RECETAS_IMAGE_TAG:-latest}"
     container_name: recetas-doctor
     restart: unless-stopped
     mem_limit: 64m
@@ -115,7 +120,7 @@ services:
       - "traefik.http.services.recetas-doctor.loadbalancer.server.port=80"
 
   pharmacy:
-    image: ghcr.io/rafaseros/recetas-pharmacy:${RECETAS_IMAGE_TAG:-latest}
+    image: "ghcr.io/${GHCR_OWNER:?GHCR_OWNER is required (the GitHub account that owns this repository), e.g. abrereflo}/recetas-pharmacy:${RECETAS_IMAGE_TAG:-latest}"
     container_name: recetas-pharmacy
     restart: unless-stopped
     mem_limit: 64m
