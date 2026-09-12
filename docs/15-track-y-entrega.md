@@ -1,6 +1,17 @@
 # 15 — Track y entrega
 
-**Track seleccionado: `Real-World Ethereum Applications`** (track 6 de EAG Global). En Devfolio se elige primero `Bolivia Hackathon` y después ese track. Este documento justifica la elección, lista lo que exige la entrega y define la estrategia frente a los bounties de patrocinadores.
+**Track seleccionado: `Real-World Ethereum Applications`** (track 6 de EAG Global). `VERIFICAR:` este documento asumía que en Devfolio se elige primero `Bolivia Hackathon` y después ese track; ese flujo no se pudo confirmar y es el objeto de [D-28](#d-28). Este documento justifica la elección, lista lo que exige la entrega y define la estrategia frente a los bounties de patrocinadores.
+
+> **Alerta de entrega — verificación del 11 de septiembre de 2026**
+>
+> Los datos de plataforma de este documento no se pudieron confirmar, y el sitio oficial del evento apunta a otro lugar.
+>
+> | Fuente | Qué dice |
+> |---|---|
+> | `eag-global-buildathon.devfolio.co` (y su página `/prizes`) | Un único track, "$12,500 (Open): EAG Scholarship". No menciona Bolivia, Cochabamba, ShanHaiWoo, Avalanche, Vaquita, Pollar ni Unlock Protocol. Sus fechas de registro publicadas van del 20 de julio al 30 de septiembre de 2026 |
+> | `ethereumbolivia.org` (sitio oficial del evento presencial) | Buildathon en Cochabamba desde el 11 de septiembre de 2026, tres días, "200+ Hackers", "**$2,000+ En premios**", inscripción mediante **formularios de Google**, y **ningún enlace a Devfolio** |
+>
+> Todo indica que son dos programas distintos, y este documento asumió que eran el mismo. Devfolio renderiza su contenido en el navegador, así que podría haber bounties de patrocinadores detrás de elementos interactivos que no fueron alcanzables en esta comprobación: lo que sigue es "no se pudo confirmar", no "no existe". También vale la pena registrar que en ediciones anteriores ETH Bolivia usó TAIKAI, no Devfolio. La acción que se desprende de esto es confirmar el canal de entrega directamente con la organización antes de cualquier otra cosa: registrarse en la plataforma equivocada equivale a no ser evaluado.
 
 ## Datos del evento
 
@@ -8,11 +19,12 @@
 |---|---|
 | Evento | ETH Bolivia Buildathon 2026 / EAG Global, Cochabamba |
 | Fechas | 11 al 13 de septiembre de 2026 |
-| Cierre de entrega | Sábado 13, **8:30** |
+| Cierre de entrega | `VERIFICAR:` Sábado 13, **8:30** — depende de cuál plataforma sea la real |
 | Demos | 10:30 a 14:30 · **5 minutos: 3 de showcase + 2 de preguntas** |
 | Anuncio de ganadores | 16:00 |
-| Plataforma | `https://eag-global-buildathon.devfolio.co/` — hay que registrarse **antes** de enviar |
-| Premio principal | **Una sola** beca ShanHaiWoo: hasta 800 USD de pasaje aéreo más ~30 días de alojamiento en Shenzhen. No hay premio en efectivo en los tracks principales |
+| Plataforma | `VERIFICAR:` `https://eag-global-buildathon.devfolio.co/` — el sitio oficial del evento registra por formulario de Google, no por este enlace. Ver la alerta de entrega arriba y [D-28](#d-28) |
+| Premio principal | `VERIFICAR:` cifras contradictorias — Devfolio anuncia un único track, "$12,500 (Open): EAG Scholarship", **sin mencionar ShanHaiWoo en ningún momento**; el sitio oficial anuncia "**$2,000+ En premios**". No se sabe cuál rige este evento |
+| Beca ShanHaiWoo | `VERIFICAR:` el programa existe, pero las fuentes consultadas lo ubican en **Singapur**, no en Shenzhen como afirmaba una versión anterior de esta tabla: alrededor de 2.500 USD de valor total, hasta 800 USD de reembolso de pasaje y 30 días de alojamiento compartido. Tampoco se pudo confirmar que se otorgue en este evento. No mencionar la ciudad en el pitch sin comprobarlo antes |
 
 > **El reloj es el riesgo número uno.** Todo lo demás de esta documentación es preparación; lo único que se evalúa el día 13 es un demo que funcione.
 
@@ -56,9 +68,10 @@ Los tres materiales son obligatorios. El estado es el de este documento y debe a
 
 ### Checklist de entrega
 
-- [ ] Registro en Devfolio hecho antes del envío
-- [ ] Seleccionado `Bolivia Hackathon`
-- [ ] Seleccionado el track `Real-World Ethereum Applications`
+- [ ] Canal de inscripción y entrega confirmado con la organización ([D-28](#d-28))
+- [ ] Registro en Devfolio hecho antes del envío (condicionado a que D-28 confirme que la entrega es por Devfolio)
+- [ ] Seleccionado `Bolivia Hackathon` (condicionado a D-28)
+- [ ] Seleccionado el track `Real-World Ethereum Applications` (condicionado a D-28)
 - [ ] Contrato desplegado y verificado, con dirección anotada en el README
 - [ ] Demo accesible por URL pública o ejecutable con los pasos del README
 - [ ] README con funcionalidades, instalación, ejecución e integración técnica
@@ -69,18 +82,20 @@ Los tres materiales son obligatorios. El estado es el de este documento y debe a
 
 Se puede competir en el track principal y en bounties a la vez. El criterio es no poner en riesgo el entregable principal.
 
-| Bounty | Premio | Qué exige | Veredicto |
-|---|---|---|---|
-| **Avalanche** | 200 USD | Contrato desplegado **y verificado** en Avalanche, con uso relevante y justificado. Temas incluidos: identidad digital, KYC y trazabilidad | **Candidato real.** Ver D-27 |
-| Vaquita | 100 USDC | Crear cuenta, depositar, publicar video en TikTok o Instagram, referidos. **No requiere programar** | **Tomarlo.** Lo hace alguien del equipo en paralelo sin tocar el código |
-| Pollar | 200 USDC | Pollar integrado como motor de pagos con transacción real en mainnet | **Descartar.** El MVP no tiene flujo de pago. Agregar uno para calificar sería exactamente el "integrar para cumplir el requisito" que los bounties penalizan |
-| Unlock Protocol | 800 USD | Plugin de WordPress, o portal de contenido token-gated para monetización de creadores | **Descartar.** Ninguno de los dos bounties concretos corresponde al dominio, aunque el concepto de membresía onchain se parezca al de credencial profesional |
+| Bounty | Premio declarado | Qué exige | Estado de verificación | Veredicto |
+|---|---|---|---|---|
+| **Avalanche** | 200 USD | Contrato desplegado **y verificado** en Avalanche, con uso relevante y justificado. Temas incluidos: identidad digital, KYC y trazabilidad | `No se pudo confirmar` para este evento. La edición 2025 (Santa Cruz, sobre TAIKAI) sí tuvo premios de Avalanche, pero con montos y requisitos distintos: 400 USD por uso de ICM-ICTT y 100 USD por un caso de negocio con eERC. Ninguno de los dos corresponde a los 200 USD que este documento asume | **Candidato real solo si se confirma que existe en esta edición.** Ver [D-27](#d-27) |
+| Vaquita | 100 USDC | Crear cuenta, depositar, publicar video en TikTok o Instagram, referidos. **No requiere programar** | `No se pudo confirmar`. No se encontró ningún patrocinador con ese nombre vinculado al evento; las búsquedas solo devolvieron coincidencias sin relación | **Tomarlo si se confirma.** En ese caso lo hace alguien del equipo en paralelo, sin tocar el código; no dedicarle tiempo antes de verificar que exista |
+| Pollar | 200 USDC | Pollar integrado como motor de pagos con transacción real en mainnet | `Empresa confirmada, bounty no confirmado`. Pollar es una fintech boliviana real (`pollar.xyz`), pero se describe a sí misma como motor de pagos **sobre Stellar y Solana**, no EVM. Si sus rieles no son EVM, el requisito puede ser inalcanzable desde un stack sobre Base con independencia del tiempo disponible | **Descartar**, ahora reforzado por una segunda razón independiente de la original: el MVP no tiene flujo de pago, y agregar uno para calificar sería exactamente el "integrar para cumplir el requisito" que los bounties penalizan |
+| Unlock Protocol | 800 USD | Plugin de WordPress, o portal de contenido token-gated para monetización de creadores | `No se pudo confirmar`. El plugin de WordPress es un producto real, pero no se encontró ningún bounty de Unlock Protocol para este evento. La única interacción documentada con la comunidad boliviana es de diciembre de 2024, para un evento distinto | **Descartar.** Ninguno de los dos bounties concretos corresponde al dominio, aunque el concepto de membresía onchain se parezca al de credencial profesional |
+
+> Ninguno de los cuatro se pudo confirmar contra una fuente vigente para este evento, así que ninguno debería recibir tiempo de construcción solo con el respaldo de este documento. La verificación más barata y confiable es fotografiar el tablero de premios de los patrocinadores en el lugar, o preguntar en el canal del evento; es más rápido que cualquier investigación adicional por internet.
 
 <a id="d-27"></a>
 
 > **Decisión pendiente — D-27: desplegar también en Avalanche para el bounty**
 >
-> **Contexto.** Toda la arquitectura de [01](01-arquitectura.md) elige Base Sepolia por su tooling de paymaster y passkeys. El bounty de Avalanche exige un contrato desplegado y verificado en Avalanche, y advierte que agregar Avalanche solo para cumplir el requisito no califica: el 40% de su puntuación es la relevancia de la integración. `PrescriptionRegistry` es EVM y pequeño, así que desplegarlo en Avalanche es barato en tiempo.
+> **Contexto.** Toda la arquitectura de [01](01-arquitectura.md) elige Base Sepolia por su tooling de paymaster y passkeys. El bounty de Avalanche exige un contrato desplegado y verificado en Avalanche, y advierte que agregar Avalanche solo para cumplir el requisito no califica. `VERIFICAR:` este documento afirmaba que el 40% de la puntuación es la relevancia de la integración; ese peso no se pudo confirmar contra ninguna fuente de esta edición, ni tampoco la existencia del bounty en sí. `PrescriptionRegistry` es EVM y pequeño, así que desplegarlo en Avalanche es barato en tiempo.
 >
 > **Opciones.** (a) No participar y concentrarse en el track principal. (b) Desplegar el mismo `PrescriptionRegistry` en Avalanche y presentarlo como verificación multi-cadena de la misma receta. (c) Justificarlo por subred: una subred de Avalanche permitiría a una autoridad sanitaria operar su propia red con reglas propias, que es el argumento que hoy vive como camino de producción en [01](01-arquitectura.md).
 >
@@ -88,16 +103,31 @@ Se puede competir en el track principal y en bounties a la vez. El criterio es n
 >
 > **Impacto si se difiere.** Ninguno sobre el entregable principal. Se pierde la oportunidad de 200 USD.
 
+<a id="d-28"></a>
+
+> **Decisión pendiente — D-28: canal real de inscripción y entrega**
+>
+> **Contexto.** Este documento asume Devfolio con selección de "Bolivia Hackathon". El sitio oficial del evento registra por formulario de Google y no enlaza a Devfolio; el programa de Devfolio tiene su propio calendario hasta octubre y no menciona Bolivia en ningún momento. En ediciones anteriores la organización usó TAIKAI. Sea cual sea el canal real, tiene un cierre de entrega dentro del propio evento.
+>
+> **Opciones.** (a) Confirmar con la organización en el lugar o en el canal oficial, y registrarse donde indiquen. (b) Registrarse en ambas plataformas para cubrir la ambigüedad. (c) Mantener el supuesto de este documento.
+>
+> **Recomendación.** (a), de inmediato, y (b) si cuesta minutos y queda alguna duda. (c) no es viable: un entregable presentado en la plataforma equivocada no se evalúa.
+>
+> **Impacto si se difiere.** Total. Es la única decisión pendiente de todo el conjunto documental capaz de anular la entrega con independencia del estado del código.
+
 ## Orden de prioridades hasta el cierre
 
-1. Contrato `PrescriptionRegistry` desplegado y verificado, con el test que prueba que la segunda dispensación revierte.
-2. Las dos aplicaciones mínimas: el médico genera un QR, la farmacia lo escanea y dispensa.
-3. README de entrega completo.
-4. Ensayo cronometrado del demo.
-5. Todo lo demás, incluido el bounty de Avalanche.
+1. Confirmar el canal real de inscripción y entrega con la organización ([D-28](#d-28)).
+2. Contrato `PrescriptionRegistry` desplegado y verificado, con el test que prueba que la segunda dispensación revierte.
+3. Las dos aplicaciones mínimas: el médico genera un QR, la farmacia lo escanea y dispensa.
+4. README de entrega completo.
+5. Ensayo cronometrado del demo.
+6. Todo lo demás, incluido el bounty de Avalanche.
+
+> El orden de ejecución completo, con criterios de salida y dependencias, está en [16](16-plan-de-ejecucion.md).
 
 > **Si algo se cae, se cae en orden inverso.** El plan de recorte está en [09](09-roadmap.md) y no se negocia el día 3.
 
 ## Siguiente paso
 
-Volver a [09-roadmap.md](09-roadmap.md) para el plan de las horas restantes, y tener [12-preguntas-de-jurado.md](12-preguntas-de-jurado.md) abierto durante los 2 minutos de QA.
+Volver a [09-roadmap.md](09-roadmap.md) para el plan de las horas restantes, revisar [16-plan-de-ejecucion.md](16-plan-de-ejecucion.md) para el orden de ejecución verificado, y tener [12-preguntas-de-jurado.md](12-preguntas-de-jurado.md) abierto durante los 2 minutos de QA.
