@@ -118,6 +118,35 @@ function _isAccreditedPractitioner(address account) internal view returns (bool)
 | `a.expirationTime` | Las credenciales caducan y deben renovarse |
 | `a.recipient == account` | Impide reutilizar la attestation de otro |
 
+### Auto-registro: quién escribe `credentialOf`
+
+`credentialOf[account]` es el puntero que el contrato sigue para encontrar la attestation de una cuenta. Alguien tiene que escribirlo, y esa decisión no puede contradecir [D-14](#d-14), que exige un contrato **sin administrador**. Se resuelve con **auto-registro**:
+
+```solidity
+function registerCredential(bytes32 uid) external;
+```
+
+Cualquiera puede llamarla, y solo puede escribir su propio puntero. El contrato lee la attestation en EAS **antes** de escribir nada y exige, en el momento del registro, las mismas cinco condiciones que exigirá después en cada uso:
+
+| Comprobación en el registro | Error si falla |
+|---|---|
+| El uid no es cero y existe en EAS | `InvalidCredentialUid`, `CredentialNotFound` |
+| `a.recipient == msg.sender` | `CredentialNotForCaller` |
+| `a.attester == issuerAuthority` | `CredentialWrongIssuer` |
+| `a.schema` es el de médico o el de farmacia | `CredentialUnknownSchema` |
+| `a.revocationTime == 0` | `CredentialRevoked` |
+| No caducada | `CredentialExpired` |
+
+Al terminar emite `CredentialRegistered(account, uid, schema)`.
+
+**Por qué esto no introduce un administrador.** El permiso para escribir en `credentialOf` no vale nada: un uid inventado no existe en EAS, uno ajeno falla por `recipient`, y uno firmado por cualquier otra cuenta falla por `attester`. La autoridad real sigue siendo el emisor de credenciales, que actúa en EAS y nunca toca este contrato. Registrar no concede nada: solo declara dónde mirar.
+
+**Por qué se revalida siempre.** Lo que se guarda es un puntero, nunca un veredicto. `_isAccreditedPractitioner` y `_isAccreditedPharmacy` vuelven a leer la attestation en **cada** `issue` y **cada** `dispense`, así que una revocación posterior al registro corta el acceso en la transacción siguiente, sin que nadie tenga que borrar el puntero. Es exactamente la latencia «inmediata» que promete [02](02-roles-y-permisos.md).
+
+**Renovación.** Una credencial renovada es un uid nuevo: se vuelve a llamar `registerCredential` y el puntero se mueve. No hace falta una función de baja ni una de actualización, y no existe ninguna forma de escribir el puntero de otra cuenta.
+
+> En Anvil no hay EAS desplegado, así que `contracts/test/mocks/MockEAS.sol` hace de doble y `script/SetupCredentials.s.sol` acredita las tres cuentas de la demo. Fuera de la cadena 31337, `script/Deploy.s.sol` se niega a desplegar si falta la dirección de EAS, cualquiera de los dos uid de esquema o el emisor autorizado: un registro con esos valores en cero es un contrato cuya acreditación no puede aprobar a nadie, o peor, uno donde una attestation vacía encaja con un esquema vacío.
+
 ## Máquina de estados del MVP
 
 ```mermaid
@@ -254,6 +283,11 @@ Se elige el registro en emisión por legibilidad de la demo. La variante diferid
 | `test_dispense_expired_reverts` | `vm.warp` más allá de `expiresAt` |
 | `test_dispense_without_credential_reverts` | Farmacia sin attestation |
 | `test_dispense_with_revoked_credential_reverts` | Attestation revocada tras la emisión |
+| `test_dispense_with_expired_credential_reverts` | Credencial caducada entre el registro y la entrega |
+| `test_dispense_with_credential_of_another_account_reverts` | Attestation dirigida a otra cuenta |
+| `test_dispense_with_credential_from_unauthorised_issuer_reverts` | Attestation firmada por un emisor no autorizado |
+| `test_registerCredential_*` | Los mismos cinco motivos, rechazados ya en el registro |
+| `test_registerCredential_renewal_replaces_the_uid` | La renovación mueve el puntero a un uid nuevo |
 | `test_issue_by_non_practitioner_reverts` | Cuenta sin credencial de médico |
 | `test_cancel_only_by_prescriber` | Otro médico no puede anular |
 | `test_cancel_after_dispense_reverts` | No se anula lo ya entregado |
