@@ -1,31 +1,18 @@
-import { base64ToBytes, bytesToBase64, bytesToUtf8, utf8ToBytes } from '@recetas/crypto';
-import { encryptedDocumentSchema, type EncryptedDocument } from '@recetas/shared';
+import { decodeStoredPayload, encodeStoredPayload } from '@recetas/chain';
+import type { EncryptedDocument } from '@recetas/shared';
 import type { CliConfig } from './config';
 
 /**
  * Client for the off-chain encrypted payload store (services/api).
  *
- * What travels in the `ciphertext` field is the whole sealed envelope
- * (ciphertext + iv + authTag + signatures) encoded as base64, because the
- * pharmacy needs all of it to decrypt and to check the prescriber signature,
- * and the QR carries only the pointer (docs/03-modelo-de-datos.md).
- *
- * The anchored `contentHash` still covers exactly the inner AES ciphertext
- * bytes, so swapping or editing a stored row is detected on the pharmacy side.
+ * The payload codec itself lives in @recetas/chain: the encoder was here and
+ * the decoder was in apps/pharmacy, two halves of one wire format sitting in
+ * different applications with nothing keeping them in step.
  *
  * The salt is written here and never read back: the API deliberately does not
  * return it (hard rule, docs/03). The pharmacy recovers it from inside the
  * decrypted document.
  */
-
-export function encodeStoredPayload(document: EncryptedDocument): string {
-  return bytesToBase64(utf8ToBytes(JSON.stringify(document)));
-}
-
-export function decodeStoredPayload(payload: string): EncryptedDocument {
-  const json = bytesToUtf8(base64ToBytes(payload));
-  return encryptedDocumentSchema.parse(JSON.parse(json)) as EncryptedDocument;
-}
 
 async function request(url: string, init?: RequestInit): Promise<Response> {
   try {

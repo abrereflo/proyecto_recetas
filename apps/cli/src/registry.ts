@@ -1,6 +1,6 @@
 import type { Account, Address, Hex, PublicClient, WalletClient } from 'viem';
 import { PrescriptionStatus } from '@recetas/shared';
-import { prescriptionRegistryAbi } from './registry-abi';
+import { prescriptionRegistryAbi } from '@recetas/chain';
 import type { CliConfig } from './config';
 
 /**

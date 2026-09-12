@@ -1,14 +1,6 @@
-import {
-  createPublicClient,
-  createWalletClient,
-  defineChain,
-  http,
-  type Chain,
-  type Hex,
-  type PublicClient,
-  type WalletClient,
-} from 'viem';
+import { createWalletClient, http, type Hex, type PublicClient, type WalletClient } from 'viem';
 import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
+import { buildChain } from '@recetas/chain';
 import type { CliConfig } from './config';
 
 /**
@@ -17,22 +9,14 @@ import type { CliConfig } from './config';
  * The chain is built from configuration instead of importing `baseSepolia`, so
  * the same CLI drives Anvil today and the public testnet once phase 2 finishes,
  * with no code change.
+ *
+ * `buildChain` and `buildPublicClient` moved to @recetas/chain, where the
+ * pharmacy PWA and the doctor app share them; the pharmacy's copy said
+ * "Mirrors apps/cli/src/chain.ts" in its own header. What stays here is what
+ * only a CLI does: sign with a private key read from configuration, and say so
+ * in Spanish when the node is unreachable.
  */
-export function buildChain(config: CliConfig): Chain {
-  return defineChain({
-    id: config.chainId,
-    name: config.chainId === 31337 ? 'Anvil' : `Cadena ${config.chainId}`,
-    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-    rpcUrls: { default: { http: [config.rpcUrl] } },
-  });
-}
-
-export function buildPublicClient(config: CliConfig): PublicClient {
-  return createPublicClient({
-    chain: buildChain(config),
-    transport: http(config.rpcUrl),
-  });
-}
+export { buildChain, buildPublicClient } from '@recetas/chain';
 
 export function buildWalletClient(config: CliConfig, privateKey: Hex): WalletClient {
   return createWalletClient({

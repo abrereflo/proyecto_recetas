@@ -1,66 +1,29 @@
-import { verifyTypedData, type Address, type Hex, type LocalAccount } from 'viem';
+import type { Address, Hex, LocalAccount } from 'viem';
+import { PRESCRIPTION_EIP712_TYPES, PRESCRIPTION_PRIMARY_TYPE } from '@recetas/shared';
 import {
-  PRESCRIPTION_EIP712_TYPES,
-  PRESCRIPTION_PRIMARY_TYPE,
-  prescriptionDomain,
-} from '@recetas/shared';
+  domainFor,
+  verifyPrescriptionSignature,
+  type PrescriptionMessage,
+} from '@recetas/chain';
 import type { CliConfig } from './config';
 
 /**
  * Prescriber signature, EIP-712.
  *
- * The domain and the type definition come from @recetas/shared so the CLI, the
- * doctor SPA and the pharmacy PWA sign and verify exactly the same structure.
+ * The domain, the type definition, the fixed MVP nonce and the verifier come
+ * from @recetas/chain over @recetas/shared, so the CLI, the doctor SPA and the
+ * pharmacy PWA sign and verify exactly the same structure.
+ *
+ * Signing stays here: this is the only consumer that holds a raw private key
+ * and signs through a `LocalAccount`. The doctor app will sign through a wallet
+ * client, which is a different mechanism.
  *
  * The message carries no patient identifier, only the salted commitment (hard
  * rule, docs/03-modelo-de-datos.md).
  */
 
-/**
- * Replay protection nonce.
- *
- * Fixed at 0 for the MVP: the registry does not track per-prescriber nonces,
- * and replaying an identical document is already impossible because `issue`
- * reverts with `AlreadyIssued` on a repeated `contentHash`. The field stays in
- * the type so adding a real nonce later does not change the type hash callers
- * already signed against.
- */
-export const MVP_NONCE = 0n;
-
-export interface PrescriptionMessage {
-  contentHash: Hex;
-  patientCommitment: Hex;
-  prescriber: Address;
-  issuedAt: bigint;
-  expiresAt: bigint;
-  nonce: bigint;
-}
-
-export function domainFor(config: CliConfig): {
-  name: string;
-  version: string;
-  chainId: number;
-  verifyingContract: Address;
-} {
-  const domain = prescriptionDomain(config.registryAddress, config.chainId);
-
-  return {
-    name: domain.name,
-    version: domain.version,
-    chainId: domain.chainId,
-    verifyingContract: domain.verifyingContract as Address,
-  };
-}
-
-export function buildMessage(input: {
-  contentHash: Hex;
-  patientCommitment: Hex;
-  prescriber: Address;
-  issuedAt: bigint;
-  expiresAt: bigint;
-}): PrescriptionMessage {
-  return { ...input, nonce: MVP_NONCE };
-}
+export { MVP_NONCE, buildMessage, domainFor } from '@recetas/chain';
+export type { PrescriptionMessage } from '@recetas/chain';
 
 export async function signPrescription(
   account: LocalAccount,
@@ -81,14 +44,7 @@ export async function isSignatureValid(
   message: PrescriptionMessage,
   signature: Hex,
 ): Promise<boolean> {
-  return verifyTypedData({
-    address: signer,
-    domain: domainFor(config),
-    types: PRESCRIPTION_EIP712_TYPES,
-    primaryType: PRESCRIPTION_PRIMARY_TYPE,
-    message,
-    signature,
-  });
+  return verifyPrescriptionSignature({ deployment: config, signer, message, signature });
 }
 
 /** Human-readable rendering of the typed data, as screen D5 requires. */

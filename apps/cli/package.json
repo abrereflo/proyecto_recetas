@@ -17,6 +17,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@recetas/chain": "workspace:*",
     "@recetas/crypto": "workspace:*",
     "@recetas/shared": "workspace:*",
     "qrcode": "1.5.4",
