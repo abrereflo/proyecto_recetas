@@ -91,6 +91,9 @@ importers:
 
   apps/pharmacy:
     dependencies:
+      '@recetas/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
       '@recetas/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
