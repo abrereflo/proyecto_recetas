@@ -1,0 +1,24 @@
+{
+  "name": "proyecto-recetas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Verifiable e-prescription MVP on Base Sepolia",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"@recetas/api\" --filter \"@recetas/doctor\" --filter \"@recetas/pharmacy\" dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck",
+    "db:push": "pnpm --filter \"@recetas/api\" db:push"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}

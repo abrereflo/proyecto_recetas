@@ -1,0 +1,184 @@
+/* ---------------------------------------------------------------------------
+ * Mockup board chrome — NOT part of the product.
+ * Frames, labels and annotations used only to present the screens side by side.
+ * Nothing in this file ships to the apps.
+ * ------------------------------------------------------------------------- */
+
+.board {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-5) var(--space-16);
+}
+
+.board__intro {
+  max-width: 70ch;
+  margin-bottom: var(--space-10);
+}
+
+.board__title {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  margin: 0 0 var(--space-3);
+}
+
+.board__lede { font-size: var(--text-lg); color: var(--color-text-secondary); margin: 0; }
+
+.board__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: var(--space-12) var(--space-8);
+  align-items: start;
+}
+
+.board__grid--phone {
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+}
+
+.frame { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.frame__label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.frame__num {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-on-accent);
+  background: var(--color-accent);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.frame__name { font-weight: var(--weight-semibold); font-size: var(--text-lg); }
+
+.frame__note {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  max-width: 60ch;
+  margin: 0;
+}
+
+/* Desktop viewport: the doctor app runs on a clinic workstation. */
+.viewport-desktop {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-canvas);
+  box-shadow: var(--shadow-md);
+}
+
+.viewport-desktop__chrome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.viewport-desktop__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+}
+
+.viewport-desktop__url {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+}
+
+.viewport-desktop__body { padding: var(--space-5); }
+
+/* Phone viewport: the pharmacy PWA runs handheld at the counter. */
+.viewport-phone {
+  width: 340px;
+  max-width: 100%;
+  border: 10px solid var(--gray-800);
+  border-radius: 32px;
+  overflow: hidden;
+  background: var(--color-canvas);
+  box-shadow: var(--shadow-lg);
+}
+
+.viewport-phone__statusbar {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+}
+
+.viewport-phone__body { padding: var(--space-4); min-height: 560px; display: flex; flex-direction: column; }
+
+/* Annotation callout — design rationale pinned to a screen. */
+.annotation {
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-accent-subtle);
+  padding: var(--space-3) var(--space-4);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: var(--text-sm);
+}
+
+.annotation strong { color: var(--color-accent); }
+
+.annotation--pending {
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-surface);
+}
+.annotation--pending strong { color: var(--color-warning); }
+
+/* Modal presented statically inside a frame (no JS in mockups). */
+.modal-backdrop {
+  background: rgba(19, 26, 33, 0.55);
+  padding: var(--space-6);
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+}
+
+.modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  max-width: 480px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  border-top: 6px solid var(--color-danger);
+}
+
+/* Fake QR — a CSS grid standing in for the real rendered code. */
+.qr-fake {
+  width: 168px;
+  height: 168px;
+  background-image:
+    repeating-linear-gradient(90deg, var(--gray-900) 0 8px, transparent 8px 16px),
+    repeating-linear-gradient(0deg, var(--gray-900) 0 8px, transparent 8px 16px);
+  background-blend-mode: difference;
+  background-color: var(--gray-0);
+  border: 8px solid var(--gray-0);
+}
+
+.nav-mockups {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-8);
+}
+
+.nav-mockups a { color: var(--color-accent); font-weight: var(--weight-medium); text-decoration: none; }
+.nav-mockups a:hover { text-decoration: underline; }
+.nav-mockups a[aria-current="page"] { color: var(--color-text); text-decoration: underline; }

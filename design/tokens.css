@@ -1,0 +1,230 @@
+/* ---------------------------------------------------------------------------
+ * Design tokens — e-prescription MVP
+ * Single source of truth for both apps (doctor SPA, pharmacy PWA) and for the
+ * static mockups in design/mockups/.
+ *
+ * Naming: semantic first (--color-danger), primitive second (--blue-600).
+ * Components must consume semantic tokens only, never primitives.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* --- Primitives: neutrals ---------------------------------------------- */
+  --gray-0:   #ffffff;
+  --gray-50:  #f7f9fb;
+  --gray-100: #eef2f6;
+  --gray-200: #dde4ec;
+  --gray-300: #c2cdd9;
+  --gray-400: #94a3b3;
+  --gray-500: #6b7c8d;
+  --gray-600: #4c5a68;
+  --gray-700: #35414d;
+  --gray-800: #212b35;
+  --gray-900: #131a21;
+
+  /* --- Primitives: brand / status --------------------------------------- */
+  --blue-50:   #e8f1fb;
+  --blue-100:  #cbe0f6;
+  --blue-500:  #1372d6;
+  --blue-600:  #0b5cab;
+  --blue-700:  #084782;
+
+  --green-50:  #e6f4ed;
+  --green-500: #128a57;
+  --green-600: #0f7a4d;
+  --green-700: #0a5c3a;
+
+  --red-50:    #fdecea;
+  --red-500:   #d3352c;
+  --red-600:   #b3261e;
+  --red-700:   #8a1c16;
+
+  --amber-50:  #fdf1e0;
+  --amber-500: #b87200;
+  --amber-600: #9a5b00;
+
+  /* --- Semantic: surfaces ----------------------------------------------- */
+  --color-canvas:          var(--gray-50);
+  --color-surface:         var(--gray-0);
+  --color-surface-sunken:  var(--gray-100);
+  --color-border:          var(--gray-200);
+  --color-border-strong:   var(--gray-300);
+
+  /* --- Semantic: text ---------------------------------------------------- */
+  --color-text:            var(--gray-900);
+  --color-text-secondary:  var(--gray-600);
+  --color-text-muted:      var(--gray-500);
+  --color-text-on-accent:  var(--gray-0);
+
+  /* --- Semantic: interactive -------------------------------------------- */
+  --color-accent:          var(--blue-600);
+  --color-accent-hover:    var(--blue-700);
+  --color-accent-subtle:   var(--blue-50);
+  --color-focus-ring:      var(--blue-500);
+
+  /* --- Semantic: status --------------------------------------------------
+   * These four carry the whole product story. Read them as prescription
+   * lifecycle states, not as decoration.
+   *   success  -> Dispensed, signature verified, credential valid
+   *   danger   -> Already dispensed, revoked credential, invalid signature
+   *   warning  -> Clinical alert that informs but does not block
+   *   info     -> Pending on-chain confirmation
+   * ---------------------------------------------------------------------- */
+  --color-success:         var(--green-600);
+  --color-success-surface: var(--green-50);
+  --color-success-border:  var(--green-500);
+
+  --color-danger:          var(--red-600);
+  --color-danger-surface:  var(--red-50);
+  --color-danger-border:   var(--red-500);
+
+  --color-warning:         var(--amber-600);
+  --color-warning-surface: var(--amber-50);
+  --color-warning-border:  var(--amber-500);
+
+  --color-info:            var(--blue-600);
+  --color-info-surface:    var(--blue-50);
+  --color-info-border:     var(--blue-500);
+
+  /* --- Typography --------------------------------------------------------
+   * Body: Inter — high legibility at small sizes, clinical neutrality.
+   * Mono: JetBrains Mono — every address, hash and prescription id renders in
+   * mono with tabular figures, so a judge can compare two hashes by eye.
+   * ---------------------------------------------------------------------- */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  --text-xs:   0.75rem;   /* 12px — captions, hashes */
+  --text-sm:   0.875rem;  /* 14px — secondary, labels */
+  --text-base: 1rem;      /* 16px — body, form inputs (never smaller: mobile zoom) */
+  --text-lg:   1.125rem;  /* 18px — emphasised body */
+  --text-xl:   1.375rem;  /* 22px — section titles */
+  --text-2xl:  1.75rem;   /* 28px — screen titles */
+  --text-3xl:  2.25rem;   /* 36px — verdict headline (pharmacy result) */
+  --text-4xl:  3rem;      /* 48px — the REJECTED screen, readable across a room */
+
+  --leading-tight:  1.2;
+  --leading-normal: 1.5;
+
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* --- Spacing: 4px base ------------------------------------------------- */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* --- Shape ------------------------------------------------------------- */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-full: 999px;
+
+  /* --- Elevation ---------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(19, 26, 33, 0.06);
+  --shadow-md: 0 4px 12px rgba(19, 26, 33, 0.08);
+  --shadow-lg: 0 12px 32px rgba(19, 26, 33, 0.12);
+
+  /* --- Layout ------------------------------------------------------------- */
+  --touch-target: 44px;   /* minimum tap size, pharmacy app is used one-handed */
+  --content-max:  1120px; /* doctor app content column */
+  --form-max:     720px;  /* prescription form column */
+
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --ease: cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+/* --- Dark mode ------------------------------------------------------------
+ * The pharmacy app is used at a counter that may be dimly lit, and the demo
+ * room will be dark. Status surfaces keep their hue but lose saturation so the
+ * REJECTED screen still reads as red without glowing.
+ * ------------------------------------------------------------------------ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-canvas:          var(--gray-900);
+    --color-surface:         var(--gray-800);
+    --color-surface-sunken:  #1a232c;
+    --color-border:          var(--gray-700);
+    --color-border-strong:   var(--gray-600);
+
+    --color-text:            var(--gray-50);
+    --color-text-secondary:  var(--gray-300);
+    --color-text-muted:      var(--gray-400);
+
+    --color-accent:          #4d9bee;
+    --color-accent-hover:    #74b3f4;
+    --color-accent-subtle:   #10293f;
+
+    --color-success:         #3fbc84;
+    --color-success-surface: #0d2a1e;
+    --color-success-border:  #128a57;
+
+    --color-danger:          #f0837b;
+    --color-danger-surface:  #351310;
+    --color-danger-border:   #d3352c;
+
+    --color-warning:         #e0a33f;
+    --color-warning-surface: #331f05;
+    --color-warning-border:  #b87200;
+
+    --color-info:            #4d9bee;
+    --color-info-surface:    #10293f;
+    --color-info-border:     #1372d6;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-canvas:          var(--gray-900);
+  --color-surface:         var(--gray-800);
+  --color-surface-sunken:  #1a232c;
+  --color-border:          var(--gray-700);
+  --color-border-strong:   var(--gray-600);
+
+  --color-text:            var(--gray-50);
+  --color-text-secondary:  var(--gray-300);
+  --color-text-muted:      var(--gray-400);
+
+  --color-accent:          #4d9bee;
+  --color-accent-hover:    #74b3f4;
+  --color-accent-subtle:   #10293f;
+
+  --color-success:         #3fbc84;
+  --color-success-surface: #0d2a1e;
+  --color-success-border:  #128a57;
+
+  --color-danger:          #f0837b;
+  --color-danger-surface:  #351310;
+  --color-danger-border:   #d3352c;
+
+  --color-warning:         #e0a33f;
+  --color-warning-surface: #331f05;
+  --color-warning-border:  #b87200;
+
+  --color-info:            #4d9bee;
+  --color-info-surface:    #10293f;
+  --color-info-border:     #1372d6;
+}
+
+/* --- Reduced motion ------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

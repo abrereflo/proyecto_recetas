@@ -1,2 +1,31 @@
 # Local agent tooling cache
 .atl/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+
+# Test / tooling caches
+coverage/
+.vite/
+.vitest/
+
+# Editors and OS
+.DS_Store
+Thumbs.db

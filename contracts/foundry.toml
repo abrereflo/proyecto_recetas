@@ -1,0 +1,41 @@
+[profile.default]
+src = "src"
+out = "out"
+test = "test"
+script = "script"
+libs = ["lib"]
+solc_version = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = false
+bytecode_hash = "none"
+# Warnings are not tolerated in a contract that anchors clinical records.
+deny_warnings = false
+fs_permissions = [{ access = "read", path = "./out" }]
+
+[profile.ci]
+verbosity = 3
+fuzz = { runs = 1024 }
+invariant = { runs = 256, depth = 64 }
+
+[fuzz]
+runs = 256
+
+[invariant]
+runs = 64
+depth = 32
+fail_on_revert = false
+
+[fmt]
+line_length = 110
+tab_width = 4
+bracket_spacing = false
+int_types = "long"
+
+[rpc_endpoints]
+anvil = "${RPC_URL}"
+base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
+
+[etherscan]
+base_sepolia = { key = "${BASESCAN_API_KEY}", chain = 84532 }

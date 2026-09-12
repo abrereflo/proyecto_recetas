@@ -1,0 +1,21 @@
+{
+  "name": "Receta Verificable — Farmacia",
+  "short_name": "Farmacia",
+  "description": "Verificación y dispensación de recetas electrónicas.",
+  "lang": "es",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f9fb",
+  "theme_color": "#0b5cab",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

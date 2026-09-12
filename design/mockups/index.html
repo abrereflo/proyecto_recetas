@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sistema de diseño — Receta Verificable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-4); }
+    .swatch__chip { height: 64px; border-radius: var(--radius-md); border: 1px solid var(--color-border); }
+    .swatch__name { font-size: var(--text-sm); font-weight: var(--weight-medium); margin-top: var(--space-2); }
+    .swatch__use { font-size: var(--text-xs); color: var(--color-text-muted); }
+    .spec-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+    .spec-table th, .spec-table td { text-align: left; padding: var(--space-3); border-bottom: 1px solid var(--color-border); vertical-align: top; }
+    .spec-table th { color: var(--color-text-secondary); font-weight: var(--weight-semibold); }
+    section.block { margin-bottom: var(--space-12); }
+  </style>
+</head>
+<body>
+<div class="board">
+
+  <nav class="nav-mockups">
+    <a href="index.html" aria-current="page">Sistema de diseño</a>
+    <a href="doctor.html">App del médico</a>
+    <a href="pharmacy.html">App de farmacia (PWA)</a>
+  </nav>
+
+  <header class="board__intro">
+    <h1 class="board__title">Sistema de diseño</h1>
+    <p class="board__lede">
+      Un solo conjunto de tokens alimenta las dos aplicaciones y estas maquetas. Si algo cambia aquí,
+      cambia en los tres sitios a la vez: por eso las maquetas no se despegan del producto.
+    </p>
+  </header>
+
+  <section class="block">
+    <h2 class="title-screen">Color con significado</h2>
+    <p class="text-secondary" style="max-width:70ch">
+      Los cuatro colores de estado no decoran: son el ciclo de vida de la receta. Un componente que use
+      rojo para algo que no sea un rechazo rompe el vocabulario y obliga al usuario a leer el texto para
+      entender qué pasó.
+    </p>
+    <div class="card">
+      <div class="swatches">
+        <div>
+          <div class="swatch__chip" style="background:var(--color-accent)"></div>
+          <div class="swatch__name">accent</div>
+          <div class="swatch__use">Acción primaria</div>
+        </div>
+        <div>
+          <div class="swatch__chip" style="background:var(--color-success)"></div>
+          <div class="swatch__name">success</div>
+          <div class="swatch__use">Dispensada, firma válida, credencial vigente</div>
+        </div>
+        <div>
+          <div class="swatch__chip" style="background:var(--color-danger)"></div>
+          <div class="swatch__name">danger</div>
+          <div class="swatch__use">Rechazo, revocación, alerta crítica</div>
+        </div>
+        <div>
+          <div class="swatch__chip" style="background:var(--color-warning)"></div>
+          <div class="swatch__name">warning</div>
+          <div class="swatch__use">Alerta clínica que informa, nunca bloquea</div>
+        </div>
+        <div>
+          <div class="swatch__chip" style="background:var(--color-info)"></div>
+          <div class="swatch__name">info</div>
+          <div class="swatch__use">Emitida, pendiente de confirmación</div>
+        </div>
+        <div>
+          <div class="swatch__chip" style="background:var(--color-surface-sunken)"></div>
+          <div class="swatch__name">neutral</div>
+          <div class="swatch__use">Caducada, estados sin acción</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="title-screen">Tipografía</h2>
+    <div class="card stack">
+      <div>
+        <p class="text-muted" style="margin:0">Inter — cuerpo e interfaz</p>
+        <p style="font-size:var(--text-3xl);font-weight:var(--weight-bold);margin:var(--space-2) 0">Receta verificada</p>
+        <p style="margin:0">Cuerpo a 16 px. Nunca menos en un campo de formulario: por debajo, el navegador móvil hace zoom al enfocar.</p>
+      </div>
+      <div>
+        <p class="text-muted" style="margin:0">JetBrains Mono — huellas, direcciones, códigos</p>
+        <p class="mono" style="font-size:var(--text-base);margin:var(--space-2) 0">0x9f2c41ab7de0 · 0x51Ae8837 · M01AE01</p>
+        <p style="margin:0">Cifras tabulares, para que dos huellas se comparen columna a columna de un vistazo.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="title-screen">Estados de la receta en pantalla</h2>
+    <div class="card">
+      <table class="spec-table">
+        <thead>
+          <tr><th>Estado</th><th>Origen</th><th>Distintivo</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Emitida</td>
+            <td><code>PrescriptionStatus.Issued</code></td>
+            <td><span class="badge badge--info">Emitida</span></td>
+            <td>Cancelar (solo el prescriptor)</td>
+          </tr>
+          <tr>
+            <td>Dispensada</td>
+            <td><code>PrescriptionStatus.Dispensed</code></td>
+            <td><span class="badge badge--success">Dispensada</span></td>
+            <td><strong>Ninguna.</strong> Estado absorbente, sin reapertura</td>
+          </tr>
+          <tr>
+            <td>Cancelada</td>
+            <td><code>PrescriptionStatus.Cancelled</code></td>
+            <td><span class="badge badge--danger">Cancelada</span></td>
+            <td>Ninguna</td>
+          </tr>
+          <tr>
+            <td>Caducada</td>
+            <td><strong>Derivado en el cliente</strong>: <code>now &gt;= expiresAt</code></td>
+            <td><span class="badge badge--neutral">Caducada</span></td>
+            <td>Ninguna</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="annotation" style="margin-top:var(--space-4)">
+      <strong>Caducada es el caso que se cuela.</strong> No existe en el enum del contrato. Si la interfaz espera
+      un valor que nunca llega, muestra «Emitida» sobre una receta vencida y el farmacéutico descubre el problema
+      al fallar la transacción. Se calcula en el cliente, siempre.
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="title-screen">Severidad de las alertas clínicas</h2>
+    <div class="card stack">
+      <div class="row"><span class="badge badge--danger">Crítica</span> <span>Modal · exige motivo escrito · nunca bloquea la emisión</span></div>
+      <div class="row"><span class="badge badge--danger">Alta</span> <span>Modal · exige motivo elegido de una lista</span></div>
+      <div class="row"><span class="badge badge--warning">Moderada</span> <span>Aviso en línea · no interrumpe</span></div>
+      <div class="row"><span class="badge badge--info">Informativa</span> <span>Panel lateral</span></div>
+    </div>
+    <div class="annotation" style="margin-top:var(--space-4)">
+      <strong>Ninguna severidad bloquea.</strong> La regla es del sistema, no de la interfaz: el motor asiste,
+      el médico decide y la decisión queda registrada. Un bloqueo duro trasladaría la responsabilidad clínica
+      a un módulo de reglas, que es exactamente lo que no puede ocurrir.
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="title-screen">Componentes</h2>
+    <div class="card stack stack--loose">
+      <div class="stack stack--tight">
+        <p class="text-muted" style="margin:0">Botones — altura mínima 44 px</p>
+        <div class="row">
+          <button class="btn btn--primary">Primario</button>
+          <button class="btn btn--secondary">Secundario</button>
+          <button class="btn btn--danger">Destructivo</button>
+          <button class="btn btn--ghost">Terciario</button>
+          <button class="btn btn--primary" disabled>Deshabilitado</button>
+        </div>
+      </div>
+
+      <div class="stack stack--tight">
+        <p class="text-muted" style="margin:0">Campo de formulario, con y sin error</p>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="d1">Principio activo <span class="field__required">*</span></label>
+            <input class="field__control" id="d1" value="amoxicilina">
+            <span class="field__hint">Se prescribe por principio activo y código ATC.</span>
+          </div>
+          <div class="field field--invalid">
+            <label class="field__label" for="d2">Caducidad <span class="field__required">*</span></label>
+            <input class="field__control" id="d2" value="01/09/2026">
+            <span class="field__error">La fecha debe ser posterior a hoy.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack stack--tight">
+        <p class="text-muted" style="margin:0">Avisos</p>
+        <div class="alert alert--warning">
+          <span class="alert__icon" aria-hidden="true">&#9888;</span>
+          <div>
+            <p class="alert__title">Duplicidad terapéutica — moderada</p>
+            <p class="alert__body">Dos ítems comparten el grupo ATC <span class="mono">M01AE</span>.</p>
+          </div>
+        </div>
+        <div class="alert alert--danger">
+          <span class="alert__icon" aria-hidden="true">&#10007;</span>
+          <div>
+            <p class="alert__title">Receta caducada</p>
+            <p class="alert__body">Venció el 02/09/2026.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack stack--tight">
+        <p class="text-muted" style="margin:0">Veredicto — el componente de mayor peso visual del sistema</p>
+        <div class="verdict verdict--danger">
+          <span class="verdict__mark" aria-hidden="true">&#10007;</span>
+          <h3 class="verdict__headline">NO ENTREGAR</h3>
+          <p class="verdict__reason">Ya dispensada el 11/09/2026 a las 09:42 por otra farmacia.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="title-screen">Reglas que la interfaz no puede romper</h2>
+    <div class="card">
+      <table class="spec-table">
+        <thead><tr><th>Regla</th><th>Consecuencia si se rompe</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Ningún identificador de paciente llega a la cadena — ni la cédula, ni su hash, ni un seudónimo estable</td>
+            <td>Se publica un dato personal de forma permanente e irreversible</td>
+          </tr>
+          <tr>
+            <td>La sal nunca aparece en el QR, en la URL ni en un enlace compartible</td>
+            <td>El compromiso deja de proteger la identidad del paciente</td>
+          </tr>
+          <tr>
+            <td>Nunca aparece la palabra «wallet», ni frase semilla, ni saldo</td>
+            <td>Una herramienta clínica pasa a leerse como un producto cripto y pierde al usuario</td>
+          </tr>
+          <tr>
+            <td>No existe botón de reapertura sobre una receta dispensada</td>
+            <td>La interfaz miente sobre la única propiedad que sostiene el proyecto</td>
+          </tr>
+          <tr>
+            <td>La revocación se comunica como «se revoca el acceso futuro», jamás como borrado retroactivo</td>
+            <td>Afirmación falsa con consecuencias legales</td>
+          </tr>
+          <tr>
+            <td>Se declara que el motor solo evalúa lo que el médico escribe</td>
+            <td>El médico confía en una cobertura que no existe</td>
+          </tr>
+          <tr>
+            <td>No se promete analítica por paciente, detección entre farmacias ni <em>doctor shopping</em></td>
+            <td>Se promete algo que el diseño cancela de forma deliberada y permanente</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

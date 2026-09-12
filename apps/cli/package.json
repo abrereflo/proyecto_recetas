@@ -1,0 +1,32 @@
+{
+  "name": "@recetas/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Demo CLI: issue, verify and dispense a verifiable prescription end to end",
+  "license": "Apache-2.0",
+  "bin": {
+    "receta": "./bin/receta.js"
+  },
+  "scripts": {
+    "receta": "tsx src/main.ts",
+    "demo": "tsx src/main.ts demo",
+    "build": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@recetas/crypto": "workspace:*",
+    "@recetas/shared": "workspace:*",
+    "qrcode": "1.5.4",
+    "viem": "2.21.54"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "@types/qrcode": "1.5.5",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}

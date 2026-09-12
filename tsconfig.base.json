@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": false,
+
+    // No package in this workspace emits JavaScript. Both apps go through Vite
+    // and the API runs from source with tsx, so every TypeScript project here is
+    // typecheck-only. Emitting declarations would also pull each dependency's
+    // sources into the dependant's program and break `rootDir` (TS6059).
+    "sourceMap": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@recetas/shared": ["packages/shared/src/index.ts"],
+      "@recetas/crypto": ["packages/crypto/src/index.ts"],
+      "@recetas/rules": ["packages/rules/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "contracts/out", "contracts/cache", "contracts/lib"]
+}
