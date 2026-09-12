@@ -6,8 +6,8 @@ Términos usados en esta documentación, con la definición que aplica en este p
 
 | Término | Definición |
 |---|---|
-| **L2** | Red que ejecuta transacciones fuera de la cadena principal de Ethereum y publica en ella sus datos o pruebas, heredando su seguridad con coste mucho menor |
-| **Base Sepolia** | Red de pruebas del L2 Base. Es donde corre este proyecto |
+| **L2** | Red que ejecuta transacciones fuera de la cadena principal de Ethereum y publica en ella sus datos o pruebas, heredando su seguridad con coste mucho menor. Se define aquí porque el término aparece en la literatura del sector: **este proyecto no corre sobre un L2** |
+| **Avalanche Fuji** | Testnet de la C-Chain de Avalanche, su cadena compatible con el EVM. Es donde corre este proyecto: `chainId` 43113, moneda nativa AVAX. Avalanche es una **L1 independiente**, con validadores y consenso propios: ejecuta bytecode del EVM, pero no hereda la seguridad de Ethereum, no publica en ella datos ni pruebas y no tiene secuenciador |
 | **Testnet** | Red de pruebas cuyo token no tiene valor económico |
 | **EOA** | Cuenta controlada por una clave privada (externally owned account). Es la wallet tradicional |
 | **Smart account** | Cuenta que es un contrato: define por sí misma qué firmas acepta y qué operaciones permite |
@@ -15,7 +15,7 @@ Términos usados en esta documentación, con la definición que aplica en este p
 | **UserOperation** | Intención firmada por el usuario en ERC-4337. Todavía no es una transacción |
 | **EntryPoint** | Contrato canónico de ERC-4337 que valida y ejecuta lotes de `UserOperation` |
 | **Bundler** | Servicio que agrupa `UserOperation` y las envía a la cadena pagando el gas |
-| **Paymaster** | Contrato que se compromete a pagar el gas de una operación según una política. Es lo que permite que el médico no compre ETH |
+| **Paymaster** | Contrato que se compromete a pagar el gas de una operación según una política. Es lo que permite que el médico no compre AVAX |
 | **EIP-7702** | Mecanismo que permite a una EOA delegar temporalmente en código de contrato, obteniendo capacidades de smart account |
 | **Gas** | Unidad de coste computacional de una transacción en Ethereum |
 | **`revert`** | Interrupción de una transacción que deshace todos sus efectos. Es lo que ocurre al intentar dispensar dos veces |
@@ -30,7 +30,7 @@ Términos usados en esta documentación, con la definición que aplica en este p
 | **WebAuthn** | Estándar web que permite a un navegador usar passkeys |
 | **secp256k1** | Curva elíptica que usa Ethereum para firmar |
 | **secp256r1 (P-256)** | Curva elíptica que usan WebAuthn y los enclaves seguros. **No es la misma que la de Ethereum** |
-| **RIP-7212** | Precompilado que permite al EVM verificar firmas P-256 a coste razonable. Es lo que hace viables las passkeys en un L2 |
+| **RIP-7212** | Precompilado que permite al EVM verificar firmas P-256 a coste razonable. Es lo que hace viables las passkeys on-chain. Está disponible en `0x…0100` en Avalanche Fuji, comprobado con una firma P-256 propia |
 | **EAS** | Ethereum Attestation Service. Infraestructura para emitir afirmaciones firmadas y revocables sobre direcciones |
 | **Attestation** | Afirmación firmada por un emisor sobre un sujeto, con esquema tipado. Aquí acredita a médicos y farmacias |
 | **ADSIB** | Agencia para el Desarrollo de la Sociedad de la Información en Bolivia. Autoridad de certificación estatal de firma digital |
