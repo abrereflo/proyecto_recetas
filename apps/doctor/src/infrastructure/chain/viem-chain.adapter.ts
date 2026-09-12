@@ -1,6 +1,8 @@
 import {
   BaseError,
   ContractFunctionExecutionError,
+  ContractFunctionRevertedError,
+  ContractFunctionZeroDataError,
   ProviderRpcError,
   RpcError,
   createWalletClient,
@@ -242,11 +244,49 @@ const EXECUTION_REVERTED = 3;
  * broadcast and stranded the anchor. The rule is inverted: every viem error is
  * lost transport EXCEPT an ANSWER — a provider decision, or a contract verdict,
  * which also reaches here raw as its JSON-RPC code.
+ *
+ * The one class that says NOTHING about which of the two it is —
+ * `ContractFunctionExecutionError` — is decided by `answeredWithRevert`.
  */
 function isTransportFailure(error: unknown): boolean {
   // A bare `fetch` failure never becomes a viem error.
   if (error instanceof TypeError) return true;
   if (!(error instanceof BaseError)) return false;
-  if (error instanceof ProviderRpcError || error instanceof ContractFunctionExecutionError) return false;
+  if (error instanceof ProviderRpcError) return false;
+  // NEVER exempt this class by TYPE (see `answeredWithRevert`).
+  if (error instanceof ContractFunctionExecutionError) return !answeredWithRevert(error);
   return !(error instanceof RpcError && error.code === EXECUTION_REVERTED);
+}
+
+/**
+ * Whether a failed contract call carries the chain's REFUSAL, or only the fact
+ * that the call did not get through.
+ *
+ * `ContractFunctionExecutionError` cannot be exempted by type. Every contract
+ * call viem makes — `simulateContract`, `readContract` and, above all,
+ * `writeContract` — catches whatever was thrown and hands it to
+ * `getContractError`, which returns that class UNCONDITIONALLY; all it varies
+ * is what it puts in `cause`. A dropped HTTP request and a reverting contract
+ * therefore arrive as the SAME top-level class, and the answer only exists
+ * further down the chain. (`waitForTransactionReceipt` and `getBlock` do not
+ * wrap at all, which is why the raw-`RpcError` rule in the classifier stands.)
+ *
+ * Exempting the class is worst at `writeContract`: that call IS the broadcast,
+ * a transport failure there is exactly the case where nobody knows whether the
+ * transaction reached the node, and calling it a verdict loses the attempt —
+ * an anchored receta whose decryption key died with the closure.
+ *
+ * So walk the cause chain for the signals `getContractError` leaves when the
+ * contract actually answered: the decoded revert, the empty return, or the
+ * reverting node answer itself by JSON-RPC code (read by code and not by class
+ * because `RpcRequestError` carries code 3 without being an `RpcError`).
+ */
+function answeredWithRevert(error: BaseError): boolean {
+  return error.walk(isRevertSignal) !== null;
+}
+
+function isRevertSignal(candidate: unknown): boolean {
+  if (candidate instanceof ContractFunctionRevertedError) return true;
+  if (candidate instanceof ContractFunctionZeroDataError) return true;
+  return errorCode(candidate) === EXECUTION_REVERTED;
 }
