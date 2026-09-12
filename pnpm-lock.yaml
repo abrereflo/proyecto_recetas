@@ -153,6 +153,28 @@ importers:
         specifier: 2.1.8
         version: 2.1.8(@types/node@22.10.2)(jsdom@25.0.1)
 
+  packages/chain:
+    dependencies:
+      '@recetas/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+      '@recetas/shared':
+        specifier: workspace:*
+        version: link:../shared
+      viem:
+        specifier: 2.21.54
+        version: 2.21.54(typescript@5.6.3)(zod@3.25.76)
+    devDependencies:
+      '@types/node':
+        specifier: 22.10.2
+        version: 22.10.2
+      typescript:
+        specifier: 5.6.3
+        version: 5.6.3
+      vitest:
+        specifier: 2.1.8
+        version: 2.1.8(@types/node@22.10.2)(jsdom@25.0.1)
+
   packages/crypto:
     dependencies:
       '@recetas/shared':
