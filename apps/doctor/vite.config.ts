@@ -7,6 +7,10 @@ const workspaceRoot = fileURLToPath(new URL('../..', import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  // The `VITE_*` variables live in the root `.env` (root env.example), one file
+  // for the whole workspace. Without this the app silently reads no
+  // configuration at all and every screen reports a missing variable.
+  envDir: workspaceRoot,
   server: {
     host: '0.0.0.0',
     port: Number(process.env.DOCTOR_PORT ?? 5173),
