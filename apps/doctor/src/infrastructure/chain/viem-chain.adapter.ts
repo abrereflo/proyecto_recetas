@@ -1,4 +1,8 @@
 import {
+  BaseError,
+  ContractFunctionExecutionError,
+  ProviderRpcError,
+  RpcError,
   createWalletClient,
   custom,
   getAbiItem,
@@ -15,6 +19,7 @@ import {
 } from '@recetas/shared';
 import {
   ChainUnreachableError,
+  TransactionRevertedError,
   type ChainPort,
   type IssueReceipt,
   type IssuedPrescriptionLog,
@@ -200,6 +205,12 @@ export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainP
         .writeContract(simulated as never)
         .catch(asPrescriberDecision);
       const receipt = await publicClient.waitForTransactionReceipt({ hash: transactionHash });
+
+      // A REVERTED TRANSACTION RESOLVES ITS RECEIPT TOO (R4-001): viem does not
+      // throw for it, and this is the only thing between a mined-and-refused
+      // `issue` and a QR that the pharmacy will resolve as `None`.
+      if (receipt.status !== 'success') throw new TransactionRevertedError(transactionHash as ViemHex);
+
       const block = await publicClient.getBlock({ blockNumber: receipt.blockNumber });
 
       return {
@@ -221,15 +232,21 @@ export function asPrescriberDecision(error: unknown): never {
   throw error;
 }
 
+/** JSON-RPC code of a reverted execution: a verdict, never a transport fault. */
+const EXECUTION_REVERTED = 3;
+/**
+ * Transport failure or verdict, on viem's error HIERARCHY, never on a list of
+ * class NAMES (R4-002): the receipt poller rejects with the RAW underlying error,
+ * so a rate-limited node arrives as `LimitExceededRpcError`, an `RpcError`
+ * subclass no allowlist keeps up with that escaped `guarded()` after a successful
+ * broadcast and stranded the anchor. The rule is inverted: every viem error is
+ * lost transport EXCEPT an ANSWER — a provider decision, or a contract verdict,
+ * which also reaches here raw as its JSON-RPC code.
+ */
 function isTransportFailure(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false;
-  const name = (error as { name?: unknown }).name;
-  return (
-    name === 'HttpRequestError' ||
-    name === 'TimeoutError' ||
-    name === 'SocketClosedError' ||
-    // The broadcast landed but the receipt never arrived: the case R4-001 is about.
-    name === 'WaitForTransactionReceiptTimeoutError' ||
-    name === 'TypeError'
-  );
+  // A bare `fetch` failure never becomes a viem error.
+  if (error instanceof TypeError) return true;
+  if (!(error instanceof BaseError)) return false;
+  if (error instanceof ProviderRpcError || error instanceof ContractFunctionExecutionError) return false;
+  return !(error instanceof RpcError && error.code === EXECUTION_REVERTED);
 }

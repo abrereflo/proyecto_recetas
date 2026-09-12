@@ -24,6 +24,7 @@ const EVERY_REASON: IssueRejection[] = [
   { code: 'already-issued', contentHash: '0x00' },
   { code: 'practitioner-credential-missing', account: PRESCRIBER },
   { code: 'invalid-expiry', expiresAt: 1_791_691_200n },
+  { code: 'transaction-reverted', transactionHash: '0xabc0' },
   { code: 'network-error', message: 'La consulta a la cadena no se pudo completar.' },
 ];
 
@@ -123,6 +124,7 @@ describe('the rejection catalogue', () => {
       'already-issued',
       'practitioner-credential-missing',
       'invalid-expiry',
+      'transaction-reverted',
       'network-error',
     ];
 

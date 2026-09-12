@@ -131,12 +131,20 @@ export function DoctorApp({ services, now = () => new Date() }: DoctorAppProps) 
     dispatch({ type: 'startNewPrescription' });
   }, []);
 
+  /** Defence in depth (R1-001): the retained material is bound to the document
+   * it sealed, and any return to the form invalidates it. The pipeline re-derives
+   * that from the document itself; this simply never carries it across an edit. */
+  const screenDispatch = useCallback((action: FlowAction) => {
+    if (action.type === 'resumeEditing') attempt.current = undefined;
+    dispatch(action);
+  }, []);
+
   return renderScreen(state, {
     services,
     draft,
     account,
     now,
-    dispatch,
+    dispatch: screenDispatch,
     setDraft,
     onAccredited,
     onNewPrescription,

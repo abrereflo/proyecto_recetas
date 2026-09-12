@@ -77,6 +77,16 @@ export interface ChainPort {
   issuedBy(prescriber: Address): Promise<IssuedPrescriptionLog[]>;
 }
 
+/** The anchor mined with `status: 'reverted'`: NOTHING was registered. viem
+ * resolves that receipt like any other, so this keeps "the receipt arrived"
+ * from meaning "the receta is on chain" (R4-001). */
+export class TransactionRevertedError extends Error {
+  constructor(readonly transactionHash: Hex) {
+    super(`La transacción ${transactionHash} se revirtió al confirmarse.`);
+    this.name = 'TransactionRevertedError';
+  }
+}
+
 /** The RPC endpoint did not answer. Distinct from a verdict about the receta. */
 export class ChainUnreachableError extends Error {
   constructor(

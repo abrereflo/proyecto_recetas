@@ -68,6 +68,7 @@ export type IssueRejectionCode =
   | 'already-issued'
   | 'practitioner-credential-missing'
   | 'invalid-expiry'
+  | 'transaction-reverted'
   | 'network-error';
 
 /**
@@ -91,6 +92,8 @@ export type IssueRejection =
   | { code: 'practitioner-credential-missing'; account: Address }
   /** `InvalidExpiry`: the contract refused the expiry instant. */
   | { code: 'invalid-expiry'; expiresAt: bigint }
+  /** The anchor was mined with a reverted status: nothing was registered. */
+  | { code: 'transaction-reverted'; transactionHash: Hex }
   /** The node or the store did not answer. Not a verdict about the receta. */
   | { code: 'network-error'; message: string };
 
@@ -110,6 +113,10 @@ export interface IssueAttempt {
   dek: Uint8Array;
   iv: Uint8Array;
   issuedAt: Date;
+  /** keccak256 of the plaintext bytes this material sealed. THE REUSE IS BOUND
+   * TO THIS VALUE, never to the caller's word: the same `dek` and `iv` over an
+   * edited document is an AES-GCM nonce reuse (R1-001). */
+  documentHash: Hex;
   /** The hash this attempt sealed. Known once it reached the anchor. */
   contentHash?: Bytes32;
 }
@@ -237,6 +244,14 @@ export const ISSUE_REJECTION_COPY_ES: IssueRejectionCatalogue = {
     action: 'Corrija los días de validez de la receta y vuelva a emitir.',
   },
 
+  'transaction-reverted': {
+    headline: 'REGISTRO RECHAZADO',
+    reason: () => 'La cadena revirtió el registro de esta receta al confirmar la transacción.',
+    action:
+      'La receta no quedó registrada y el paciente no tiene ningún código válido. Vuelva a ' +
+      'intentarlo; si el rechazo se repite, contacte con el responsable técnico de la clínica.',
+  },
+
   'network-error': {
     headline: 'EMISIÓN INCOMPLETA',
     reason: (reason) => reason.message,
@@ -278,6 +293,8 @@ export function describeIssueRejection(
         return ISSUE_REJECTION_COPY_ES['practitioner-credential-missing'].reason(reason, format);
       case 'invalid-expiry':
         return ISSUE_REJECTION_COPY_ES['invalid-expiry'].reason(reason, format);
+      case 'transaction-reverted':
+        return ISSUE_REJECTION_COPY_ES['transaction-reverted'].reason(reason, format);
       case 'network-error':
         return ISSUE_REJECTION_COPY_ES['network-error'].reason(reason, format);
     }

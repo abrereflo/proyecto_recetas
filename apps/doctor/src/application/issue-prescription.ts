@@ -1,12 +1,14 @@
 import { buildMessage } from '@recetas/chain';
 import {
   bytesToBase64Url,
+  contentHashOf,
   generateDek as defaultGenerateDek,
   generateIv,
   generateSalt as defaultGenerateSalt,
   patientCommitment,
   saltToHex,
   sealDocument,
+  utf8ToBytes,
 } from '@recetas/crypto';
 import {
   QR_PAYLOAD_VERSION,
@@ -19,7 +21,7 @@ import {
 } from '@recetas/shared';
 import { buildPrescriptionDocument, validateDraft, type PrescriptionDraft } from '../domain/draft';
 import type { IssueAttempt, IssueResult, IssueStepId } from '../domain/issuance';
-import { ChainUnreachableError, type ChainPort } from '../ports/chain.port';
+import { ChainUnreachableError, TransactionRevertedError, type ChainPort } from '../ports/chain.port';
 import {
   DocumentStoreRejectedError,
   DocumentStoreUnreachableError,
@@ -101,11 +103,17 @@ export interface IssuePrescriptionInput {
 
 export type IssuePrescription = (input: IssuePrescriptionInput) => Promise<IssueResult>;
 
+/** An attempt's material before it is bound, and the fingerprint that binds it. */
+type IssueMaterial = Omit<IssueAttempt, 'documentHash' | 'contentHash'>;
+const fingerprintOf = (doc: unknown): Hex => contentHashOf(utf8ToBytes(JSON.stringify(doc)));
+
 export function createIssuePrescription(deps: IssuePrescriptionDeps): IssuePrescription {
   const { chain, documents, signer, config } = deps;
   const generateSalt = deps.generateSalt ?? defaultGenerateSalt;
   const generateDek = deps.generateDek ?? defaultGenerateDek;
   const now = deps.now ?? (() => new Date());
+
+  const fresh = (): IssueMaterial => ({ salt: generateSalt(), dek: generateDek(), iv: generateIv(), issuedAt: now() });
 
   return async ({ draft, prescriber, attempt: retried, onStep }) => {
     const step = (id: IssueStepId): void => onStep?.(id);
@@ -122,14 +130,24 @@ export function createIssuePrescription(deps: IssuePrescriptionDeps): IssuePresc
     }
 
     // --- 1. The clinical document. It never leaves this browser in the clear.
-    const attempt: IssueAttempt =
-      retried ?? { salt: generateSalt(), dek: generateDek(), iv: generateIv(), issuedAt: now() };
+    //
+    // A RETRY REUSES `dek` AND `iv` ONLY FOR A BYTE-IDENTICAL DOCUMENT, read off
+    // the document and never taken on the caller's word (R1-001, R3-001): the
+    // doctor returns from a refusal, edits a dose, and re-sealing THAT under the
+    // retained (key, nonce) pair is an AES-GCM nonce reuse — the XOR of both
+    // plaintexts to whoever reads both envelopes, and a forgeable tag.
+    // ORDERING: `salt` is a field of the document, so the fingerprint exists only
+    // once one is BUILT with a candidate salt. The material therefore builds a
+    // candidate FIRST and is kept only if it hashes to the stored fingerprint.
+    const build = (material: IssueMaterial) => {
+      const doc = buildPrescriptionDocument({ draft, salt: material.salt, issuedAt: material.issuedAt });
+      return { ...doc, attempt: { ...material, documentHash: fingerprintOf(doc.document) } };
+    };
+
+    let built = build(retried ?? fresh());
+    if (retried !== undefined && built.attempt.documentHash !== retried.documentHash) built = build(fresh());
+    const { document, issuedAtSeconds, expiresAtSeconds, attempt } = built;
     const { salt } = attempt;
-    const { document, issuedAtSeconds, expiresAtSeconds } = buildPrescriptionDocument({
-      draft,
-      salt,
-      issuedAt: attempt.issuedAt,
-    });
     step('document');
 
     // --- 2. Commitment. The salt stays off-chain; only this is anchored.
@@ -204,13 +222,22 @@ export function createIssuePrescription(deps: IssuePrescriptionDeps): IssuePresc
     } catch (error) {
       if (error instanceof SignerRejectedError) return { outcome: 'aborted' };
 
+      // Mined and refused: the receipt arrived, the anchor did not (R4-001). A
+      // refusal like any other revert, keeping the material so a retry
+      // re-simulates the same hash and the contract names the reason.
+      if (error instanceof TransactionRevertedError) {
+        const reason = { code: 'transaction-reverted', transactionHash: error.transactionHash } as const;
+        return { outcome: 'rejected', attempt: { ...attempt, contentHash }, reason };
+      }
+
       // The contract is the authority on why. `AlreadyIssued` carries the hash,
       // `NotAccreditedPractitioner` the account, `InvalidExpiry` the instant.
       const rejection = decodeIssueRejection(error);
       // `AlreadyIssued` for the hash of the attempt BEING RETRIED is the
       // contract confirming the unobserved broadcast landed: rebuild the QR.
+      const reused = retried?.documentHash === attempt.documentHash;
       const recovered =
-        rejection?.code === 'already-issued' && retried?.contentHash === rejection.contentHash;
+        rejection?.code === 'already-issued' && reused && retried?.contentHash === rejection.contentHash;
       if (rejection !== undefined && !recovered) return { outcome: 'rejected', reason: rejection };
 
       if (error instanceof ChainUnreachableError) {

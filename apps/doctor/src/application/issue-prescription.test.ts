@@ -4,7 +4,7 @@ import { prescriptionRegistryAbi } from '@recetas/chain';
 import { base64ToBytes, bytesToBase64Url, decryptDocument, saltToHex } from '@recetas/crypto';
 import { decodeQrPayload, type EncryptedDocument, type PrescriptionDocument } from '@recetas/shared';
 import type { ChainPort, IssuedPrescriptionLog, IssueReceipt, IssueRequest } from '../ports/chain.port';
-import { ChainUnreachableError } from '../ports/chain.port';
+import { ChainUnreachableError, TransactionRevertedError } from '../ports/chain.port';
 import {
   DocumentStoreRejectedError,
   DocumentStoreUnreachableError,
@@ -396,6 +396,37 @@ describe('when the contract refuses the issuance', () => {
     expect(decodeQrPayload(retry.qr).key).toBe(bytesToBase64Url(DEK_BYTES));
   });
 
+  /** R1-001, R3-001. The doctor can go back to the form from a refusal and edit
+   * a dose. Re-sealing THAT under the retained (dek, iv) is an AES-GCM nonce
+   * reuse: the XOR of both plaintexts, and a forgeable tag. */
+  it('never re-seals an edited draft under the retained nonce', async () => {
+    const dropped = () => Promise.reject(new ChainUnreachableError(CONFIG.rpcUrl));
+    const { issue, recorder } = harness({ issue: dropped });
+
+    const first = await issue({ draft: aDraft(), prescriber: PRESCRIBER });
+    const attempt = first.outcome === 'rejected' ? first.attempt : undefined;
+    const items = [anItem({ dosageInstruction: '2 cápsulas cada 8 horas' })];
+    await issue({ draft: aDraft({ items }), prescriber: PRESCRIBER, attempt });
+
+    const [sealed, resealed] = recorder.stored;
+    expect(attempt?.iv).toBeDefined();
+    expect(resealed?.document.encryption.iv).not.toBe(sealed?.document.encryption.iv);
+  });
+
+  /** R4-001. A transaction that mines with `status: 'reverted'` anchored
+   * nothing; reporting it as an issuance hands the patient a dead QR. */
+  it('reports a reverted anchor as a refusal, never as an issuance', async () => {
+    const reverted = () => Promise.reject(new TransactionRevertedError(TRANSACTION_HASH));
+    const result = await harness({ issue: reverted }).issue({ draft: aDraft(), prescriber: PRESCRIBER });
+
+    // The material survives, so a retry re-simulates the same contentHash.
+    expect(result).toMatchObject({
+      outcome: 'rejected',
+      reason: { code: 'transaction-reverted', transactionHash: TRANSACTION_HASH },
+      attempt: { contentHash: expect.any(String) },
+    });
+  });
+
   it('maps AlreadyIssued onto its own reason, with the contentHash', async () => {
     const { issue, recorder } = harness({
       issue: async (request) => {
@@ -458,6 +489,8 @@ describe('when the contract refuses the issuance', () => {
         message: 'No hay respuesta de la cadena, así que la receta no quedó registrada.',
       },
     });
+    // R4-002: the attempt must reach the screen, or the retry burns the anchor.
+    expect(result).toMatchObject({ attempt: { contentHash: expect.any(String) } });
   });
 
   it('rethrows a failure nobody modelled instead of inventing a refusal', async () => {
