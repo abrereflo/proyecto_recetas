@@ -30,10 +30,15 @@ WORKDIR /app
 
 # Manifests first so this layer is cached independently of source edits (same
 # ordering as the dev image, apps/pharmacy/Dockerfile). The pharmacy app
-# depends on shared and crypto only, NOT rules (apps/pharmacy/package.json).
-COPY package.json pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+# depends on shared, crypto and chain, NOT rules (apps/pharmacy/package.json).
+# Every one of them must have its manifest here BEFORE the install: pnpm only
+# links a workspace package it can see at install time, so a manifest missing
+# here leaves that package without node_modules and `tsc` later fails to
+# resolve its own dependencies (viem, in chain's case).
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/crypto/package.json ./packages/crypto/
+COPY packages/chain/package.json ./packages/chain/
 COPY apps/pharmacy/package.json ./apps/pharmacy/
 
 RUN pnpm install --frozen-lockfile
