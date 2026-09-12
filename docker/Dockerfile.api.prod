@@ -22,7 +22,7 @@ WORKDIR /app
 # Manifests first so this layer is cached independently of source edits (same
 # ordering as the dev image, services/api/Dockerfile). The api depends on all
 # three workspace packages (services/api/package.json).
-COPY package.json pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/crypto/package.json ./packages/crypto/
 COPY packages/rules/package.json ./packages/rules/
@@ -59,9 +59,16 @@ COPY --from=build /app ./
 # Non-root runtime user, uid 10001 — same convention as sigdoc's api image
 # (docker/Dockerfile.api.prod there). The process only reads its own files and
 # binds :3000 (>1024, so no privilege is needed).
+#
+# The user gets a REAL home directory (no `-H`): the deploy runs the migration
+# in a one-off container from this image (`db:migrate`, see
+# .github/workflows/deploy.yml), and drizzle-kit's entrypoint unconditionally
+# mkdir's $HOME/.local/share/drizzle-studio as it loads. For a homeless user
+# that mkdir is EACCES, so every drizzle-kit invocation dies before it reads a
+# single migration file and the deploy aborts at the migration step.
 RUN addgroup -g 10001 appuser \
-  && adduser -D -H -u 10001 -G appuser appuser \
-  && chown -R appuser:appuser /app
+  && adduser -D -u 10001 -G appuser appuser \
+  && chown -R appuser:appuser /app /home/appuser
 USER appuser
 
 EXPOSE 3000
