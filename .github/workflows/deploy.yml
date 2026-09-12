@@ -43,6 +43,83 @@ jobs:
       - name: Test
         run: pnpm -r test
 
+  check-vite-vars:
+    name: Check VITE_* Repository Variables
+    runs-on: ubuntu-latest
+    # Deliberately no `needs:` — this costs seconds and needs no checkout, so it
+    # runs beside the test job and reports a misconfiguration immediately.
+    # Same push-only gate as the build jobs: on a PR the workflow stops at test.
+    if: github.event_name == 'push'
+    # Reads nothing but `vars.*`, which the runner interpolates before the step
+    # starts: no checkout, no API call, so no token scope at all.
+    permissions: {}
+
+    steps:
+      # Vite inlines these four into the doctor and pharmacy bundles at image
+      # build time. None of them has a default, so an undefined or blank one
+      # produces a green build, a green deploy, and two SPAs that render
+      # ConfigurationScreen in production. This job turns that silent failure
+      # into a loud one, before either image is built.
+      #
+      # `vars.X` for a variable that does not exist interpolates to the empty
+      # string — Actions has no "undefined" in an expression context — so a
+      # single emptiness check covers both "never created" and "created blank".
+      #
+      # The values are passed through `env:` rather than interpolated into the
+      # script: a repository variable is attacker-influenced input if a writer
+      # account is compromised, and `${{ }}` inside `run:` is substituted as
+      # shell source before bash sees it.
+      - name: Require every VITE_* repository variable
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_RPC_URL: ${{ vars.VITE_RPC_URL }}
+          VITE_CHAIN_ID: ${{ vars.VITE_CHAIN_ID }}
+          VITE_PRESCRIPTION_REGISTRY_ADDRESS: ${{ vars.VITE_PRESCRIPTION_REGISTRY_ADDRESS }}
+        run: |
+          set -euo pipefail
+
+          # env.ts trims before it decides, so this trims too: a value must fail
+          # here for the same reasons it fails there, and pass for the same
+          # reasons it passes. Whitespace-only therefore counts as missing.
+          trim() {
+            local value="$1"
+            value="${value#"${value%%[![:space:]]*}"}"
+            printf '%s' "${value%"${value##*[![:space:]]}"}"
+          }
+
+          problems=()
+
+          for name in VITE_API_URL VITE_RPC_URL VITE_CHAIN_ID VITE_PRESCRIPTION_REGISTRY_ADDRESS; do
+            printf -v "$name" '%s' "$(trim "${!name-}")"
+            if [ -z "${!name}" ]; then
+              problems+=("$name is not set. Define it under Settings > Secrets and variables > Actions > Variables.")
+            fi
+          done
+
+          # Format checks mirror the app-side rules in
+          # apps/pharmacy/src/infrastructure/config/env.ts (chainIdSchema is
+          # `z.coerce.number().int().positive()`, addressSchema is the regex
+          # below, which apps/cli/src/config.ts repeats). A misspelled value
+          # fails exactly as silently as a missing one. Only these two are
+          # checked for shape: the other two are URLs with no fixed form here.
+          if [ -n "$VITE_CHAIN_ID" ] && ! printf '%s' "$VITE_CHAIN_ID" | grep -Eq '^[1-9][0-9]*$'; then
+            problems+=("VITE_CHAIN_ID must be a positive integer, for example 84532 on Base Sepolia. Current value: '${VITE_CHAIN_ID}'.")
+          fi
+
+          if [ -n "$VITE_PRESCRIPTION_REGISTRY_ADDRESS" ] && ! printf '%s' "$VITE_PRESCRIPTION_REGISTRY_ADDRESS" | grep -Eq '^0x[0-9a-fA-F]{40}$'; then
+            problems+=("VITE_PRESCRIPTION_REGISTRY_ADDRESS must be a 20-byte address matching ^0x[0-9a-fA-F]{40}\$. Current value: '${VITE_PRESCRIPTION_REGISTRY_ADDRESS}'.")
+          fi
+
+          if [ ${#problems[@]} -gt 0 ]; then
+            for problem in "${problems[@]}"; do
+              echo "::error::${problem}"
+            done
+            echo "Refusing to build the doctor and pharmacy images: ${#problems[@]} build-time variable(s) would be baked in wrong."
+            exit 1
+          fi
+
+          echo "All four VITE_* repository variables are present and well-formed."
+
   build-api:
     name: Build & Push API Image
     runs-on: ubuntu-latest
@@ -84,7 +161,9 @@ jobs:
   build-doctor:
     name: Build & Push Doctor Image
     runs-on: ubuntu-latest
-    needs: [test]
+    # check-vite-vars gates only the two image builds that bake VITE_* values
+    # in; build-api reads none of them and is left on `needs: [test]`.
+    needs: [test, check-vite-vars]
     if: github.event_name == 'push'
     permissions:
       contents: read
@@ -129,7 +208,7 @@ jobs:
   build-pharmacy:
     name: Build & Push Pharmacy Image
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [test, check-vite-vars]
     if: github.event_name == 'push'
     permissions:
       contents: read
