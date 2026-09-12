@@ -127,6 +127,18 @@ async function send(
   const hash = await walletClient.writeContract(request as never);
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
+  // `waitForTransactionReceipt` resolves for a reverted transaction exactly as
+  // it does for a mined one: the verdict is in `status`, not in a thrown error.
+  // The simulation above catches the ordinary refusals, but it cannot catch a
+  // race — another pharmacy dispensing between the simulation and inclusion —
+  // and printing that as a success is the opposite of what the demo proves.
+  if (receipt.status !== 'success') {
+    throw new Error(
+      `La transacción ${hash} revirtió en la cadena (bloque ${receipt.blockNumber}).\n` +
+        'El estado en la cadena no cambió. Vuelva a consultar la receta antes de reintentar.',
+    );
+  }
+
   return { hash, blockNumber: receipt.blockNumber, gasUsed: receipt.gasUsed };
 }
 
