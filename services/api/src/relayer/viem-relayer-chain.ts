@@ -4,10 +4,10 @@ import {
   encodeFunctionData,
   http,
   type PublicClient,
+  type Transport,
   type WalletClient,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { nonceManager } from 'viem/nonce';
 import { buildChain, entryPointV07Abi, type PackedUserOperation } from '@recetas/chain';
 import type { Address, Hex } from '@recetas/shared';
 import type { RelayerConfig } from '../env';
@@ -18,7 +18,7 @@ import type { RelayerChain } from './relayer';
  *
  * EVERYTHING ABOVE IT IS PURE. `Relayer` takes this interface, so the packing,
  * the hashing, the policy and the refusals are all tested without a chain, and
- * this file has no logic worth testing — it is adapter and nothing else. That
+ * the only logic here is the submission queue below. That
  * split is the reason `relayer.test.ts` can assert what the relayer would do
  * with a paymaster that is not ours, or an operation that hashes to something
  * else, without an RPC anywhere near it.
@@ -34,25 +34,44 @@ import type { RelayerChain } from './relayer';
  * a second definition of the chain, and the first RPC change would leave this
  * service talking to one network while the apps propose another.
  */
-export function createViemRelayerChain(config: RelayerConfig): RelayerChain {
+export function createViemRelayerChain(
+  config: RelayerConfig,
+  /** The seam the queue below is tested through. Production never passes it. */
+  transport: Transport = http(config.rpcUrl),
+): RelayerChain {
   const chain = buildChain({ chainId: config.chainId, rpcUrl: config.rpcUrl });
-  /**
-   * THE `nonceManager` IS LOAD-BEARING. One key, nothing above this file
-   * serialises submissions, so two doctors sending at once are two concurrent
-   * `sendHandleOps`; without it viem reads `eth_getTransactionCount(pending)`
-   * afresh per send, both reads return the same number, and the transactions
-   * collide — one dropped or rejected as "nonce too low" AFTER simulation
-   * passed, wedging the relayer. One in-process counter is the right scope
-   * because this process alone holds the key.
-   */
-  const account = privateKeyToAccount(config.privateKey, { nonceManager });
+  const account = privateKeyToAccount(config.privateKey);
 
-  const publicClient: PublicClient = createPublicClient({ chain, transport: http(config.rpcUrl) });
-  const walletClient: WalletClient = createWalletClient({
-    account,
-    chain,
-    transport: http(config.rpcUrl),
-  });
+  /**
+   * SUBMISSIONS RUN ONE AT A TIME, AND VIEM'S `nonceManager` IS DELIBERATELY
+   * NOT USED. Both close the same hole — one key, nothing above this file
+   * serialises, so two doctors sending at once read the same
+   * `eth_getTransactionCount(pending)` and collide — but `nonceManager`'s
+   * counter has no release path. Verified against viem 2.21.54: `consume`
+   * increments and stores the nonce inside `prepareTransactionRequest`, BEFORE
+   * `sendTransaction` signs and calls `eth_sendRawTransaction`, and the catch
+   * around that broadcast only rewraps. One dropped connection therefore
+   * consumes a nonce the chain never saw, `get` answers `previousNonce + 1`
+   * from then on while the node still expects the skipped number, and every
+   * later submission queues behind that gap for the life of the process. A bug
+   * that needs one transient failure is worse than one that needs two
+   * concurrent sends. A queue keeps no such state: each send reads the real
+   * pending nonce when its turn comes, so a failure heals on the next one.
+   */
+  let queue: Promise<unknown> = Promise.resolve();
+
+  const serialised = <T>(send: () => Promise<T>): Promise<T> => {
+    const result = queue.then(send, send);
+
+    // Swallowed on the queue only, so a failed send does not reject the next
+    // caller's turn; `result` still carries the error to its own caller.
+    queue = result.catch(() => undefined);
+
+    return result;
+  };
+
+  const publicClient: PublicClient = createPublicClient({ chain, transport });
+  const walletClient: WalletClient = createWalletClient({ account, chain, transport });
 
   return {
     address: account.address as Address,
@@ -152,17 +171,19 @@ export function createViemRelayerChain(config: RelayerConfig): RelayerChain {
     },
 
     async sendHandleOps(userOp: PackedUserOperation, gas: bigint): Promise<Hex> {
-      return walletClient.writeContract({
-        address: config.entryPoint,
-        abi: entryPointV07Abi,
-        functionName: 'handleOps',
-        // The beneficiary is this relayer: the EntryPoint reimburses it from
-        // the paymaster's deposit when the operation succeeds.
-        args: [[userOp], account.address],
-        account,
-        chain,
-        gas,
-      });
+      return serialised(() =>
+        walletClient.writeContract({
+          address: config.entryPoint,
+          abi: entryPointV07Abi,
+          functionName: 'handleOps',
+          // The beneficiary is this relayer: the EntryPoint reimburses it from
+          // the paymaster's deposit when the operation succeeds.
+          args: [[userOp], account.address],
+          account,
+          chain,
+          gas,
+        }),
+      );
     },
   };
 }

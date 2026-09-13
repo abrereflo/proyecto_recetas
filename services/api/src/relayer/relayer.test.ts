@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RpcRequestError, createPublicClient, custom, encodeErrorResult, encodeFunctionData } from 'viem';
+import {
+  InsufficientFundsError,
+  RpcRequestError,
+  createPublicClient,
+  custom,
+  encodeErrorResult,
+  encodeFunctionData,
+} from 'viem';
 import {
   ENTRY_POINT_V07_ADDRESS,
   entryPointV07Abi,
@@ -165,6 +172,7 @@ interface FakeChainOptions {
   baseFeePerGas?: bigint;
   maxPriorityFeePerGas?: bigint;
   simulate?: () => Promise<void>;
+  send?: () => Promise<Hex>;
 }
 
 function fakeChain(options: FakeChainOptions = {}) {
@@ -183,6 +191,10 @@ function fakeChain(options: FakeChainOptions = {}) {
     getPaymasterDeposit: async () => 1_000_000_000_000_000_000n,
     simulateHandleOps: options.simulate ?? (async () => {}),
     sendHandleOps: async (userOp, gas) => {
+      if (options.send !== undefined) {
+        return options.send();
+      }
+
       sent.push({ userOp, gas });
 
       return `0x${'ab'.repeat(32)}` as Hex;
@@ -379,6 +391,43 @@ describe('submitting a signed operation', () => {
     expect(sent).toHaveLength(1);
     expect(submission.transactionHash).toMatch(/^0x[0-9a-f]{64}$/);
     expect(submission.beneficiary).toBe(RELAYER_ADDRESS);
+  });
+
+  /**
+   * A BROADCAST THAT FAILS IS THE ONE REFUSAL THIS ENDPOINT HAD NO CODE FOR.
+   * Uncaught it is not a `RelayerRefusal`, so the route rethrows it and Fastify
+   * answers a bare 500 — and out of AVAX is the likeliest way for a demo
+   * relayer to fail, which makes it the worst one to leave unnamed.
+   *
+   * The error is viem's own class, nested, because that is where viem puts it:
+   * `getTransactionError` hangs the node error off a `TransactionExecutionError`
+   * and `writeContract` wraps that again, so the check has to walk to find it.
+   */
+  it('names its own empty balance instead of letting the send escape as a 500', async () => {
+    const { relayer, result } = await prepared({
+      send: async () => {
+        throw new Error('broadcast failed', { cause: new InsufficientFundsError({}) });
+      },
+    });
+
+    await expect(relayer.submit({ userOp: result.userOp })).rejects.toMatchObject({
+      code: 'insufficient_funds',
+    });
+  });
+
+  /** Anything else the node or the socket did: still a refusal, still carrying the cause. */
+  it('refuses a broadcast that failed for any other reason, with the cause attached', async () => {
+    const dropped = new Error('socket hang up');
+    const { relayer, result } = await prepared({
+      send: async () => {
+        throw dropped;
+      },
+    });
+
+    await expect(relayer.submit({ userOp: result.userOp })).rejects.toMatchObject({
+      code: 'send_failed',
+      cause: dropped,
+    });
   });
 
   /**

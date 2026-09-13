@@ -1,4 +1,4 @@
-import { ExecutionRevertedError, decodeFunctionData, slice, toFunctionSelector } from 'viem';
+import { decodeFunctionData, slice, toFunctionSelector } from 'viem';
 import {
   encodeInitCode,
   getUserOpHash,
@@ -169,7 +169,9 @@ export class RelayerRefusal extends Error {
       | 'fee_above_ceiling'
       | 'prefund_above_ceiling'
       | 'would_revert'
-      | 'chain_unavailable',
+      | 'chain_unavailable'
+      | 'insufficient_funds'
+      | 'send_failed',
     message: string,
     readonly failure?: DecodedFailure,
     cause?: unknown,
@@ -507,6 +509,12 @@ export class Relayer {
    * The order is deliberate: every check that costs nothing runs before the one
    * that costs an RPC round trip, and the round trip runs before anything is
    * signed by the relayer's key.
+   *
+   * THE RETURNED `transactionHash` IS A BROADCAST RECEIPT, NOT PROOF OF
+   * INCLUSION. It is what the node answered to `eth_sendRawTransaction`; this
+   * does not wait for a mined receipt, so the transaction can still be dropped
+   * and the operation inside it can still revert on chain. A caller that needs
+   * the outcome has to watch the hash.
    */
   async submit(input: SubmitInput): Promise<Submission> {
     const draft = deserialiseDraft(input.userOp);
@@ -572,7 +580,31 @@ export class Relayer {
     const gas =
       (requiredGas(draft) * TRANSACTION_GAS_SLACK_NUMERATOR) / TRANSACTION_GAS_SLACK_DENOMINATOR;
 
-    const transactionHash = await this.chain.sendHandleOps(userOp, gas);
+    // A FAILED BROADCAST IS STILL AN ANSWER THIS SERVICE OWES. Uncaught it is
+    // not a `RelayerRefusal`, so the route rethrows and Fastify renders a bare
+    // 500 — which on stage is the difference between reading "the relayer is
+    // out of gas money" and guessing among half a dozen causes.
+    let transactionHash: Hex;
+
+    try {
+      transactionHash = await this.chain.sendHandleOps(userOp, gas);
+    } catch (error) {
+      if (isInsufficientFunds(error)) {
+        throw new RelayerRefusal(
+          'insufficient_funds',
+          `the relayer ${this.chain.address} does not hold enough AVAX to pay this transaction's fee; nothing was submitted, so this can be retried unchanged once the relayer is funded`,
+          undefined,
+          error,
+        );
+      }
+
+      throw new RelayerRefusal(
+        'send_failed',
+        'the signed transaction could not be broadcast; it may or may not have reached the node, so check the account nonce before sending this operation again',
+        undefined,
+        error,
+      );
+    }
 
     return { userOpHash, transactionHash, beneficiary: this.chain.address };
   }
@@ -612,16 +644,44 @@ export class Relayer {
  * code -1 instead and produces none of the three.
  *
  * Matched structurally rather than with `instanceof` because the code sits on a
- * plain object at the bottom of the chain, and because `@recetas/api` must not
- * depend on which of viem's wrappers happens to be on top this release.
+ * plain object at the bottom of the chain — and the 3 is written out for the
+ * same reason, an import of `ExecutionRevertedError` only to read its static
+ * `.code` being the dependency this check exists not to have. Viem pins the
+ * same value there, in `viem/errors/node.ts`.
  */
+const EXECUTION_REVERTED_CODE = 3;
+
 export function isExecutionRevert(error: unknown): boolean {
+  return hasCause(
+    error,
+    (record) => record.code === EXECUTION_REVERTED_CODE || record.name === 'ExecutionRevertedError',
+  );
+}
+
+/**
+ * Whether the broadcast failed because this relayer cannot pay for it — the one
+ * send failure an operator can act on, so the one worth telling apart.
+ *
+ * Verified against viem 2.21.54: `getNodeError` matches the node's message
+ * against `InsufficientFundsError.nodeMessage` and `getTransactionError` hangs
+ * the result off a `TransactionExecutionError`, which `writeContract` wraps
+ * again. The class carries no `code`, so the name is what is matched.
+ */
+export function isInsufficientFunds(error: unknown): boolean {
+  return hasCause(error, (record) => record.name === 'InsufficientFundsError');
+}
+
+/** Both walk the `cause` chain: a transport wraps, and the depth varies by provider. */
+function hasCause(
+  error: unknown,
+  matches: (record: { code?: unknown; name?: unknown }) => boolean,
+): boolean {
   let candidate: unknown = error;
 
   for (let depth = 0; depth < 10 && candidate !== null && typeof candidate === 'object'; depth += 1) {
     const record = candidate as { code?: unknown; name?: unknown; cause?: unknown };
 
-    if (record.code === ExecutionRevertedError.code || record.name === 'ExecutionRevertedError') {
+    if (matches(record)) {
       return true;
     }
 

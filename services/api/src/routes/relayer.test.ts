@@ -325,28 +325,28 @@ describe('the open endpoint is rate limited', () => {
   /**
    * Keyed by sender as well as by caller, so a distributed client cannot spend
    * one doctor's sponsorship quota faster than that doctor could.
+   *
+   * EVERY SUBMISSION COMES FROM ITS OWN ADDRESS, which is what makes this an
+   * assertion about the sender key at all. Sharing one address — as this test
+   * did — lets the ip bucket account for the 429 on its own, and the test then
+   * passes unchanged with sender limiting deleted from the route.
    */
   it('counts submissions against the sender, not only against the caller', async () => {
     const { app: instance, sent } = await build({ rateLimit: 2, rateLimitWindowSeconds: 60 });
     const prepared = await prepareOne(instance);
+    const submit = (remoteAddress: string) =>
+      instance.inject({
+        method: 'POST',
+        url: '/relayer/user-operations',
+        payload: { userOp: prepared.userOp },
+        remoteAddress,
+      });
 
-    // The prepare above already consumed one of the two ip-keyed slots.
-    const first = await instance.inject({
-      method: 'POST',
-      url: '/relayer/user-operations',
-      payload: { userOp: prepared.userOp },
-    });
-
-    expect(first.statusCode).toBe(200);
-
-    const second = await instance.inject({
-      method: 'POST',
-      url: '/relayer/user-operations',
-      payload: { userOp: prepared.userOp },
-    });
-
-    expect(second.statusCode).toBe(429);
-    expect(sent).toHaveLength(1);
+    expect((await submit('10.0.0.1')).statusCode).toBe(200);
+    expect((await submit('10.0.0.2')).statusCode).toBe(200);
+    // A third fresh caller: the only budget left to exhaust is the sender's.
+    expect((await submit('10.0.0.3')).statusCode).toBe(429);
+    expect(sent).toHaveLength(2);
   });
 
   /**

@@ -156,6 +156,9 @@ function describeFailure(failure: {
   };
 }
 
+/** Refusal codes that say something about this relayer or its node, not about the operation. */
+const OUR_FAULT: ReadonlySet<string> = new Set(['chain_unavailable', 'insufficient_funds', 'send_failed']);
+
 export function relayerRoutes(relayer: Relayer, config: RelayerConfig): FastifyPluginAsyncZod {
   const limiter = new RateLimiter({
     limit: config.rateLimit,
@@ -269,7 +272,7 @@ export function relayerRoutes(relayer: Relayer, config: RelayerConfig): FastifyP
       {
         schema: {
           description:
-            'Submit a signed UserOperation through EntryPoint v0.7. One operation per transaction; no mempool, no bundling.',
+            'Submit a signed UserOperation through EntryPoint v0.7. One operation per transaction; no mempool, no bundling. The 200 carries a BROADCAST receipt: the hash the node accepted for the transaction, not proof of inclusion. Nothing here waits for it to be mined, so the transaction can still be dropped and the operation inside it can still revert on chain; watch the hash if the outcome matters.',
           body: submitBodySchema,
           response: {
             200: submitResponseSchema,
@@ -312,11 +315,15 @@ export function relayerRoutes(relayer: Relayer, config: RelayerConfig): FastifyP
           return reply.status(200).send(submission);
         } catch (error) {
           if (error instanceof RelayerRefusal) {
-            // The one refusal that is not a verdict on the operation: logged as
-            // a refusal, it sends an operator hunting for a validation bug
-            // rather than for the node that timed out or rate-limited us.
-            if (error.code === 'chain_unavailable') {
-              request.log.warn({ err: error.cause }, 'the chain could not be reached');
+            // The refusals that are not verdicts on the operation: a node that
+            // timed out, a broadcast it rejected, a relayer with no AVAX left.
+            // Logged as ordinary refusals they send an operator hunting for a
+            // validation bug, and only the cause says which of the three it is.
+            if (OUR_FAULT.has(error.code)) {
+              request.log.warn(
+                { err: error.cause, code: error.code },
+                'the operation could not be carried, and the reason is not the operation',
+              );
             } else {
               request.log.info({ code: error.code }, 'refused a user operation');
             }
