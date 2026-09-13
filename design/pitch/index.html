@@ -285,6 +285,78 @@ h2 { font-size: clamp(1.9rem, 4.1vw, 3.5rem); }
 .beat b { grid-column: 2; font-weight: 700; font-size: clamp(1.08rem, 1.72vw, 1.52rem); }
 .beat span { grid-column: 2; font-size: clamp(0.95rem, 1.45vw, 1.3rem); color: var(--text-soft); line-height: 1.5; max-width: 68ch; }
 
+/* --- Ciclo: el circuito que se cierra solo -------------------------------
+ *
+ * Cinco pasos en fila, con la flecha viviendo dentro del hueco entre tarjetas
+ * (de ahi que el hueco sea una variable: la flecha se centra contra ella).
+ * La banda de abajo es el retorno — sin ella son cinco pasos sueltos, no un
+ * ciclo, y el ciclo es justamente lo que hay que ver de un vistazo.
+ * ------------------------------------------------------------------------ */
+
+.cycle {
+  --gap: clamp(0.6rem, 1.3vw, 1.15rem);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--gap);
+  margin-top: clamp(1.2rem, 2.4vw, 2rem);
+  counter-reset: step;
+}
+.step {
+  position: relative;
+  background: var(--ink-raised);
+  border: 1px solid var(--ink-line);
+  border-radius: 10px;
+  padding: clamp(0.8rem, 1.5vw, 1.3rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.step::before {
+  counter-increment: step;
+  content: counter(step);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: clamp(0.76rem, 1.08vw, 0.94rem);
+  color: var(--accent);
+}
+.step:not(:last-child)::after {
+  content: "→";
+  position: absolute;
+  top: 50%;
+  right: calc(var(--gap) * -0.5);
+  transform: translate(50%, -50%);
+  color: var(--accent);
+  font-size: clamp(0.95rem, 1.5vw, 1.3rem);
+  line-height: 1;
+}
+.step h3 {
+  margin: 0;
+  font-size: clamp(0.98rem, 1.42vw, 1.26rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.step p {
+  margin: 0;
+  font-size: clamp(0.88rem, 1.24vw, 1.1rem);
+  line-height: 1.48;
+  color: var(--text-soft);
+}
+
+.cycle-return {
+  margin-top: clamp(0.7rem, 1.4vw, 1.15rem);
+  border: 1px dashed var(--ink-line);
+  border-radius: 10px;
+  padding: clamp(0.65rem, 1.2vw, 1rem) clamp(0.9rem, 1.7vw, 1.4rem);
+  display: flex;
+  align-items: center;
+  gap: clamp(0.6rem, 1.1vw, 0.9rem);
+  font-size: clamp(0.95rem, 1.4vw, 1.24rem);
+  line-height: 1.45;
+  color: var(--text-soft);
+}
+.cycle-return .loop { color: var(--accent); font-size: 1.5em; line-height: 1; flex: none; }
+.cycle-return b { color: var(--text); font-weight: 700; }
+
 /* --- Estado: hoy vs. sigue ----------------------------------------------- */
 
 .status-head {
@@ -421,11 +493,18 @@ body.started .hint { opacity: 0; }
   .marks li         { font-size: 1.1rem; }
   .beat b           { font-size: 1.36rem; }
   .beat span        { font-size: 1.16rem; }
+  .step h3          { font-size: 1.14rem; }
+  .step p           { font-size: 1rem; }
+  .cycle-return     { font-size: 1.14rem; }
   .ledger           { font-size: 1rem; }
   .revert-label     { font-size: 1.55rem; }
   .callout          { font-size: 1.24rem; }
   .ask p            { font-size: 1.32rem; }
   .status-head      { font-size: 0.88rem; }
+
+  /* En impresión 1vw se resuelve contra el ancho de página: el hueco del
+     ciclo se fija en milímetros para que la flecha caiga donde debe. */
+  .cycle { --gap: 4mm; }
 
   /* El hash no puede salir cortado del papel. */
   .revert { overflow: visible !important; }
@@ -442,6 +521,13 @@ body.started .hint { opacity: 0; }
 
 @media (max-width: 720px) {
   .cols-2, .cols-3 { grid-template-columns: 1fr; }
+  .cycle { grid-template-columns: 1fr; }
+  .step:not(:last-child)::after {
+    content: "↓";
+    top: auto; right: 50%;
+    bottom: calc(var(--gap) * -0.5);
+    transform: translate(50%, 50%);
+  }
   .ledger-head, .ledger-row { grid-template-columns: 2.4rem 1fr 5.5rem; }
   .ledger-head span:nth-child(3), .ledger-row .when { display: none; }
 }
@@ -452,7 +538,7 @@ body.started .hint { opacity: 0; }
 <div class="deck" id="deck">
 
   <!-- 1 · Portada — 0:00 -->
-  <section class="slide cover" data-time="0:00" data-budget="15 s">
+  <section class="slide cover" data-time="0:00" data-budget="10 s">
     <h1 class="wordmark">VeriMed</h1>
     <p class="tagline">Una receta, una entrega.</p>
     <div class="cover-meta">
@@ -462,8 +548,8 @@ body.started .hint { opacity: 0; }
     </div>
   </section>
 
-  <!-- 2 · Problema — 0:15 -->
-  <section class="slide" data-time="0:15" data-budget="25 s">
+  <!-- 2 · Problema — 0:10 -->
+  <section class="slide" data-time="0:10" data-budget="20 s">
     <p class="eyebrow">El problema</p>
     <h2>La misma receta, cinco farmacias, una mañana.</h2>
     <p class="lede">Nadie en el mostrador puede saber si esa receta ya fue retirada en la farmacia de al lado.</p>
@@ -479,8 +565,8 @@ body.started .hint { opacity: 0; }
     </div>
   </section>
 
-  <!-- 3 · Solución — 0:40 -->
-  <section class="slide" data-time="0:40" data-budget="15 s">
+  <!-- 3 · Solución — 0:30 -->
+  <section class="slide" data-time="0:30" data-budget="15 s">
     <p class="eyebrow">La garantía</p>
     <h2>El mismo modelo de un solo uso, garantizado por el contrato y no por la promesa de nadie.</h2>
     <div class="ledger" aria-label="Libro de control, dos asientos">
@@ -501,8 +587,8 @@ body.started .hint { opacity: 0; }
     <p class="lede">El segundo asiento no lo rechaza un auditor tres meses después. Lo rechaza el contrato, en el mostrador, en segundos.</p>
   </section>
 
-  <!-- 4 · Demo — 0:55 (80 s, la mitad del pitch) -->
-  <section class="slide" data-time="0:55" data-budget="80 s · la mitad del pitch">
+  <!-- 4 · Demo — 0:45 (60 s, un tercio del pitch) -->
+  <section class="slide" data-time="0:45" data-budget="60 s · un tercio del pitch">
     <p class="eyebrow">Demo en vivo</p>
     <h2>Emitir, entregar, y que la segunda vez falle.</h2>
     <div class="beats">
@@ -516,8 +602,8 @@ body.started .hint { opacity: 0; }
     </div>
   </section>
 
-  <!-- 5 · Arquitectura — 2:15 -->
-  <section class="slide" data-time="2:15" data-budget="25 s">
+  <!-- 5 · Arquitectura — 1:45 -->
+  <section class="slide" data-time="1:45" data-budget="15 s">
     <p class="eyebrow">Arquitectura · tres cajas</p>
     <h2>El dato clínico nunca toca la cadena.</h2>
     <div class="cols cols-3">
@@ -531,14 +617,44 @@ body.started .hint { opacity: 0; }
       </div>
       <div class="panel chain">
         <h3>Credenciales</h3>
-        <p>Attestations en EAS. El contrato las relee en cada entrega: revocar una licencia corta el acceso al instante, sin administrador.</p>
+        <p>Attestations en EAS con matrícula y especialidad, emitidas por la clínica para sus propios médicos. El contrato las relee en cada entrega: revocar una corta el acceso al instante, sin administrador.</p>
       </div>
     </div>
     <p class="callout">La sal es única por receta, así que <b>ni nosotros mismos</b> podemos agrupar las recetas de una persona. Es el objetivo del diseño, no un efecto secundario.</p>
   </section>
 
-  <!-- 6 · Honestidad — 2:40 -->
-  <section class="slide" data-time="2:40" data-budget="15 s">
+  <!-- 6 · El ciclo — 2:00 -->
+  <section class="slide" data-time="2:00" data-budget="25 s">
+    <p class="eyebrow">El ciclo</p>
+    <h2>Arranca en una clínica privada y una farmacia. Después se cierra solo.</h2>
+    <div class="cycle" aria-label="El ciclo, cinco pasos que vuelven al inicio">
+      <div class="step">
+        <h3>La clínica receta</h3>
+        <p>El médico firma y sale un QR. Del paciente no se ve nada.</p>
+      </div>
+      <div class="step">
+        <h3>La farmacia entrega</h3>
+        <p>Lee el QR, ve que la receta sirve, y la marca como entregada.</p>
+      </div>
+      <div class="step">
+        <h3>Queda cerrada</h3>
+        <p>Nadie la puede cobrar otra vez. Ni en la farmacia de al lado, ni mañana.</p>
+      </div>
+      <div class="step">
+        <h3>La farmacia queda cubierta</h3>
+        <p>Le queda la prueba de que entregó bien, y nadie la puede borrar. Ella tampoco.</p>
+      </div>
+      <div class="step">
+        <h3>Entra la siguiente</h3>
+        <p>Otra farmacia ve que le sirve y se suma. El libro es el mismo para todas.</p>
+      </div>
+    </div>
+    <p class="cycle-return"><span class="loop" aria-hidden="true">↺</span> <span>Y vuelve a empezar. <b>Cada farmacia que entra hace que el libro valga más</b>, y eso es lo que trae a la que falta.</span></p>
+    <p class="callout">Y esto no termina el domingo: uno de nosotros trabaja <b>adentro de una clínica</b> que ya tiene registrado a cada médico con su matrícula y su especialidad. El piloto corre ahí, sin pedirle permiso a nadie.</p>
+  </section>
+
+  <!-- 7 · Honestidad — 2:25 -->
+  <section class="slide" data-time="2:25" data-budget="15 s">
     <p class="eyebrow">Qué funciona hoy, qué sigue</p>
     <h2>Lo decimos antes de que lo pregunten.</h2>
     <div class="cols cols-2">
@@ -558,7 +674,6 @@ body.started .hint { opacity: 0; }
           <li>Abstracción de cuenta y paymaster: construidos y probados, sin desplegar</li>
           <li>Firma con passkey biométrica: el contrato y el cliente están, pero ninguna pantalla los usa</li>
           <li>Firma ADSIB: hoy figura como <em>pendiente de integración</em>, nunca simulada como válida</li>
-          <li>Sustancias controladas: exigen el formulario del SEDES y se co-diseñan con ellos</li>
           <li>Tratamiento crónico y entrega fraccionada</li>
         </ul>
       </div>
@@ -566,14 +681,13 @@ body.started .hint { opacity: 0; }
     <p class="callout">No sustituimos el recetario valorado por decreto propio. Somos <b>una capa de trazabilidad complementaria</b>, y ese es el único camino legal que existe hoy.</p>
   </section>
 
-  <!-- 7 · Pedido — 2:55 -->
-  <section class="slide" data-time="2:55" data-budget="20 s">
+  <!-- 8 · Pedido — 2:40 -->
+  <section class="slide" data-time="2:40" data-budget="15 s">
     <p class="eyebrow">Equipo FullStack · el pedido</p>
-    <h2>Tres contactos, y arrancamos el piloto.</h2>
+    <h2>La clínica ya la tenemos. Falta el otro lado del mostrador.</h2>
     <div class="asks">
-      <div class="ask"><p>El Departamento Regional de Farmacia del <b>SEDES Cochabamba</b>.</p></div>
-      <div class="ask"><p>El <b>Colegio Médico</b>, para que sea quien emita las credenciales y no nosotros.</p></div>
-      <div class="ask"><p>Una <b>clínica y una farmacia</b> dispuestas a un circuito cerrado.</p></div>
+      <div class="ask"><p>Una <b>cadena de farmacias</b> dispuesta a cerrar el circuito con la clínica que ya tenemos.</p></div>
+      <div class="ask"><p>El <b>Colegio Médico</b>, para que cuando entre la segunda clínica la credencial la firme quien otorga la matrícula.</p></div>
     </div>
     <p class="callout">Código abierto, contrato verificable en cadena, y una documentación que dice en voz alta lo que todavía no hace.</p>
   </section>
@@ -596,6 +710,7 @@ body.started .hint { opacity: 0; }
         <p>La firma legal la aporta ADSIB. La unicidad la aporta el contrato. No es una alternativa, es la otra mitad.</p>
       </div>
     </div>
+    <p class="callout">Y sí: dentro de <b>una sola cadena</b>, una base de datos deduplica igual. Lo que no hace es defenderla — un asiento que la propia farmacia puede editar no vale ante el auditor. Por eso arranca en cadena desde el primer día, para no tener que migrar el historial cuando entre la segunda cadena.</p>
   </section>
 
   <!-- B2 -->
@@ -637,8 +752,8 @@ body.started .hint { opacity: 0; }
 <div class="rail">
   <span id="rail-time"><strong>0:00</strong></span>
   <span class="rail-track"><span class="rail-fill" id="rail-fill" style="width:0%"></span></span>
-  <span id="rail-budget">15 s</span>
-  <span id="rail-count">1 / 10</span>
+  <span id="rail-budget">10 s</span>
+  <span id="rail-count">1 / 11</span>
   <button type="button" class="pdf-btn" id="pdf-btn">Guardar PDF</button>
 </div>
 
@@ -658,8 +773,8 @@ body.started .hint { opacity: 0; }
     time.innerHTML = '<strong>' + s.getAttribute('data-time') + '</strong>';
     budget.textContent = s.getAttribute('data-budget');
     count.textContent = (i + 1) + ' / ' + slides.length;
-    // El riel mide los 7 del guion; los de respaldo quedan al tope.
-    fill.style.width = Math.min(100, (i / 6) * 100) + '%';
+    // El riel mide los 8 del guion; los de respaldo quedan al tope.
+    fill.style.width = Math.min(100, (i / 7) * 100) + '%';
   }
 
   document.addEventListener('keydown', function (e) {
