@@ -16,7 +16,7 @@ Una base de datos con firma ADSIB resuelve la autenticidad pero no la unicidad e
 
 ### 3. ¿Quién paga el gas y cómo firma un médico que no sabe qué es una wallet?
 
-Hoy el médico firma con la wallet conectada en el navegador: una estructura EIP-712 legible, no una cadena hexadecimal, y esa cuenta paga el gas de la emisión con AVAX de prueba. El objetivo del piloto —todavía no construido— es que firme con la huella de su teléfono, una passkey, y que un paymaster patrocine ese gas solo para cuentas con credencial profesional vigente. En producción lo financiaría la clínica o la caja de salud; el coste por receta en esta red es bajo, pero es un número que vamos a medir, no a estimar. → [01](01-arquitectura.md)
+Hoy el médico firma con la wallet conectada en el navegador: una estructura EIP-712 legible, no una cadena hexadecimal, y esa cuenta paga el gas de la emisión con AVAX de prueba. El objetivo del piloto es que firme con la huella de su teléfono, una passkey, y que un paymaster patrocine ese gas solo para cuentas con credencial profesional vigente. Las piezas están construidas y probadas —`PasskeyAccount`, `PrescriptionPaymaster` y un relayer propio, sin proveedor de bundler—, pero no hay nada desplegado ni cableado a las aplicaciones, así que no es lo que van a ver hoy. En producción lo financiaría la clínica o la caja de salud; el coste por receta en esta red es bajo, pero es un número que vamos a medir, no a estimar. → [01](01-arquitectura.md)
 
 ### 4. Si la receta se cifra con la clave del paciente, ¿cómo la lee la farmacia?
 

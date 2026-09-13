@@ -1,6 +1,6 @@
 # 01 — Arquitectura
 
-Corremos sobre **Avalanche Fuji**, la testnet de la C-Chain de Avalanche. Avalanche es una **L1 pública e independiente**, no una L2 de Ethereum: su C-Chain es compatible con EVM, pero no publica datos ni pruebas en Ethereum y no hereda su seguridad. Lo decimos así de claro porque cambia qué garantías puede prometer el sistema. Lo que no cambia es el resto: no hay blockchain de consorcio, no hay red privada, y la arquitectura sigue apoyándose en estándares del ecosistema Ethereum que corren igual sobre cualquier EVM. De esos estándares, **EIP-712 y EAS ya están construidos y en uso hoy**: el médico firma una estructura tipada y las credenciales profesionales son attestations verificadas en cada llamada. **Abstracción de cuenta (ERC-4337), paymaster y passkeys son la decisión de diseño y el objetivo del piloto, no lo que corre hoy**: hoy el médico firma con una wallet inyectada EIP-1193 (`eip1193-signer.adapter.ts`), tiene AVAX de prueba y ve el proveedor de esa wallet en pantalla.
+Corremos sobre **Avalanche Fuji**, la testnet de la C-Chain de Avalanche. Avalanche es una **L1 pública e independiente**, no una L2 de Ethereum: su C-Chain es compatible con EVM, pero no publica datos ni pruebas en Ethereum y no hereda su seguridad. Lo decimos así de claro porque cambia qué garantías puede prometer el sistema. Lo que no cambia es el resto: no hay blockchain de consorcio, no hay red privada, y la arquitectura sigue apoyándose en estándares del ecosistema Ethereum que corren igual sobre cualquier EVM. De esos estándares, **EIP-712 y EAS ya están construidos y en uso hoy**: el médico firma una estructura tipada y las credenciales profesionales son attestations verificadas en cada llamada. **Abstracción de cuenta (ERC-4337), paymaster y passkeys están construidos, pero sin desplegar y sin cablear**: existen `PasskeyAccount.sol`, `PasskeyAccountFactory.sol`, `PrescriptionPaymaster.sol`, un cliente de passkey en la app del médico y un relayer propio en la API, todos con sus pruebas; lo que no existe es un despliegue —ni fábrica, ni paymaster, ni depósito, ni stake— ni una sola llamada desde las aplicaciones. Hoy el médico firma con una wallet inyectada EIP-1193 (`eip1193-signer.adapter.ts`), tiene AVAX de prueba y ve el proveedor de esa wallet en pantalla.
 
 ## Decisión de cadena
 
@@ -14,7 +14,7 @@ Corremos sobre **Avalanche Fuji**, la testnet de la C-Chain de Avalanche. Avalan
 El `chainId` de Avalanche Fuji es 43113, confirmado contra el RPC público `https://api.avax-test.network/ext/bc/C/rpc`, y se fija en el dominio EIP-712. El explorador es `https://testnet.snowtrace.io` y la moneda nativa es AVAX, no ETH.
 
 > **El coste honesto de esta decisión.**
-> El motivo por el que este documento elegía Base era el tooling de bundler y paymaster de ERC-4337, maduro y documentado allí. Al migrar, ese motivo deja de aplicar y no se lo reemplaza por una afirmación equivalente sobre Avalanche que no se ha comprobado. `VERIFICAR:` disponibilidad y condiciones de un proveedor de bundler y paymaster ERC-4337 en Fuji, antes de comprometer la abstracción de cuenta. Lo que sí está comprobado es el precompilado P-256, que es la pieza sin la cual las passkeys no tendrían un plan alternativo barato.
+> El motivo por el que este documento elegía Base era el tooling de bundler y paymaster de ERC-4337, maduro y documentado allí. Al migrar, ese motivo deja de aplicar y no se lo reemplaza por una afirmación equivalente sobre Avalanche. Se resolvió de otra forma: el proyecto escribió su propio paymaster y su propio relayer, así que no depende de la oferta de proveedores de Fuji. Lo que queda del coste es de operación, no de tooling —hay que desplegar y financiar ese paymaster, y D-02, más abajo, dice que quién lo financia sigue abierto—. Lo que sí está comprobado es el precompilado P-256, que es la pieza sin la cual las passkeys no tendrían un plan alternativo barato.
 
 > **Por qué una cadena pública y no una red privada.**
 > Una red de consorcio exige acuerdos de gobernanza, nodos operados por instituciones y un comité que no existe. En setenta y dos horas no se construye eso. Una cadena pública nos da finalidad rápida, coste bajo, herramientas maduras y verificabilidad por cualquiera, que es justamente lo que un jurado puede comprobar en vivo. Ese argumento nunca dependió de que la cadena fuese una L2: vale igual para una L1 pública como Avalanche.
@@ -101,8 +101,8 @@ Esta sección es el núcleo técnico del proyecto. Cada pieza resuelve un proble
 
 ### Abstracción de cuenta (ERC-4337)
 
-> **Esta sección describe el objetivo del piloto, no lo que corre hoy.**
-> No hay smart account, bundler ni paymaster desplegados: las dos aplicaciones firman a través de una wallet inyectada EIP-1193 (`eip1193-signer.adapter.ts`), y ese `TODO` del propio archivo dice cuándo cambia. La migración a una smart account respaldada por passkey es la Fase 5 y depende de la recuperación social descrita en [D-04](02-roles-y-permisos.md#d-04).
+> **Construido, sin desplegar y sin cablear.**
+> El código existe y pasa sus pruebas: `PasskeyAccount.sol`, `PasskeyAccountFactory.sol`, `PrescriptionPaymaster.sol` y el relayer propio de `services/api/src/relayer/`, que envía la operación. Lo que no existe es el despliegue —ni fábrica, ni paymaster, ni depósito, ni stake— y tampoco el cableado: las dos aplicaciones siguen firmando a través de una wallet inyectada EIP-1193 (`eip1193-signer.adapter.ts`), y ese `TODO` del propio archivo dice cuándo cambia. Cerrar la migración a una smart account respaldada por passkey es la Fase 5 de [18](18-tareas-por-fases.md) y depende además de la recuperación social descrita en [D-04](02-roles-y-permisos.md#d-04).
 
 El médico no tiene una cuenta externa con clave privada que deba respaldar. Tiene una **smart account**: un contrato que valida operaciones según la lógica que nosotros definimos.
 
@@ -111,7 +111,7 @@ sequenceDiagram
     participant U as Médico
     participant App as App del médico
     participant SA as Smart account
-    participant B as Bundler
+    participant B as Relayer propio
     participant PM as Paymaster
     participant EP as EntryPoint
     participant PR as PrescriptionRegistry
@@ -133,7 +133,7 @@ sequenceDiagram
 |---|---|
 | `UserOperation` | Intención firmada por el usuario; no es una transacción de Ethereum todavía |
 | `EntryPoint` | Contrato canónico que valida y ejecuta lotes de `UserOperation` |
-| Bundler | Servicio que agrupa operaciones y paga el gas en la cadena |
+| Bundler | Servicio que agrupa operaciones y paga el gas en la cadena. **Este proyecto no usa uno.** `handleOps` del EntryPoint v0.7 es `public` y sin control de acceso, así que un relayer propio (`services/api/src/relayer/`) envía cada operación suelta: sin mempool, sin agrupación, sin ERC-7562, sin reputación y sin stake. Por eso no se le llama bundler |
 | Smart account | Contrato del médico; define qué firma considera válida |
 | Paymaster | Contrato que se compromete a cubrir el gas de la operación |
 
@@ -158,7 +158,7 @@ El paymaster acepta pagar el gas de operaciones que cumplan una política. La nu
 
 ### Passkeys y WebAuthn: el médico no ve una wallet
 
-> **Estado: diseñado, no construido.** Ninguna de las dos aplicaciones referencia WebAuthn: ambas firman con una wallet EIP-1193 a través de `eip1193-signer.adapter.ts`. Lo que sigue describe el estado objetivo, y el puerto del firmante existe para que el cambio sea de un solo archivo. Ver [D-04](02-roles-y-permisos.md#d-04).
+> **Estado: construido, sin cablear.** Las dos mitades existen. En cadena, `contracts/src/WebAuthn.sol` reconstruye el mensaje que el autenticador firmó de verdad y `contracts/src/P256.sol` verifica la curva; `PasskeyAccount` ya las usa. En el navegador, `apps/doctor/src/infrastructure/passkey/` corre las dos ceremonias sobre `@simplewebauthn/browser` detrás de `PasskeyPort`. Lo que falta es el uso: ninguna pantalla llama a ese puerto y los dos composition roots siguen construyendo `createEip1193Signer`, así que hoy se firma con una wallet del navegador. Ver [D-04](02-roles-y-permisos.md#d-04).
 
 La clave del médico será una passkey del dispositivo: se genera en el enclave seguro del teléfono o del portátil y se usa con huella, rostro o PIN. No hay frase semilla que memorizar ni extensión que instalar.
 
@@ -175,7 +175,7 @@ El precompilado RIP-7212 está presente y operativo en Avalanche Fuji en `0x0000
 
 El médico no firma una cadena hexadecimal. Firma una estructura tipada que su navegador muestra en texto claro: quién prescribe, qué caduca cuándo, sobre qué compromiso de contenido.
 
-Además, la firma es **off-chain**: el médico firma la estructura tipada y el QR la transporta. En el MVP tal como está construido, la aplicación del médico registra la emisión on-chain en ese mismo momento con la cuenta de su wallet inyectada EIP-1193 (ver la secuencia de emisión en [05](05-almacenamiento-y-cifrado.md)); no hay paymaster todavía, así que esa cuenta paga el gas de `issue` con AVAX de prueba. Que el médico no pague ni espere depende de que el paymaster (D-02) se construya; hasta entonces, esta sección describe el objetivo, no el MVP corriendo. Existe una variante diferida, documentada en [04](04-smart-contracts.md), en la que la farmacia envía la firma junto con la dispensación y emitir no cuesta gas: queda fuera del MVP porque impide verificar la receta antes de que llegue al mostrador.
+Además, la firma es **off-chain**: el médico firma la estructura tipada y el QR la transporta. En el MVP tal como está construido, la aplicación del médico registra la emisión on-chain en ese mismo momento con la cuenta de su wallet inyectada EIP-1193 (ver la secuencia de emisión en [05](05-almacenamiento-y-cifrado.md)); no hay ningún paymaster desplegado, así que esa cuenta paga el gas de `issue` con AVAX de prueba. Que el médico no pague ni espere depende de desplegar y financiar el paymaster (D-02), no de escribirlo: el contrato ya existe. Hasta que eso ocurra, esta parte describe el objetivo, no el MVP corriendo. Existe una variante diferida, documentada en [04](04-smart-contracts.md), en la que la farmacia envía la firma junto con la dispensación y emitir no cuesta gas: queda fuera del MVP porque impide verificar la receta antes de que llegue al mostrador.
 
 ```solidity
 // EIP-712 typed data signed by the prescriber, off-chain

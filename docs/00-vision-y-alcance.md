@@ -61,7 +61,7 @@ El informe base se apoya en investigación del Laboratorio LIRE (Universidad de 
 |---|---|
 | Contrato `PrescriptionRegistry` en Avalanche Fuji | `issue(bytes32 contentHash, bytes32 patientCommitment, uint64 expiresAt)` y `dispense(bytes32 contentHash)` de un solo uso |
 | Credenciales profesionales | Attestations EAS para médicos y farmacias, con revocación |
-| Aplicación del médico | Firma EIP-712 con una wallet EIP-1193, generación de QR. La smart account y el paymaster son el paso siguiente, no entran en el MVP (ver [D-04](02-roles-y-permisos.md#d-04)) |
+| Aplicación del médico | Firma EIP-712 con una wallet EIP-1193, generación de QR. La smart account con passkey y el paymaster están construidos, pero sin desplegar y sin cablear, así que no entran en el MVP que se demuestra (ver [D-04](02-roles-y-permisos.md#d-04)) |
 | Aplicación de la farmacia | Escaneo de QR, verificación on-chain, envío de la transacción de dispensación |
 | Paciente | Recibe el QR. Sin wallet, sin cuenta, sin instalación |
 | Almacenamiento off-chain | Receta cifrada fuera de la cadena; solo el hash va on-chain |

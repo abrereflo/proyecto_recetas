@@ -67,8 +67,8 @@ Cuatro nombres, una frase cada uno. Este bloque es el que separa un proyecto de 
 
 | Pieza | La frase |
 |---|---|
-| ERC-4337 y paymaster | "Diseñado, todavía no construido: un paymaster patrocinará solo a cuentas con credencial vigente, para que el médico nunca compre AVAX" |
-| Passkeys y RIP-7212 | "El precompilado que verifica esa curva ya lo comprobamos en Fuji; la firma con huella se apoya en él y es lo que sigue" |
+| ERC-4337 y paymaster | "El paymaster está escrito y probado: patrocina solo a cuentas con credencial vigente, para que el médico nunca compre AVAX. Todavía no está desplegado ni financiado, así que hoy el médico paga su propio gas de prueba" |
+| Passkeys y RIP-7212 | "El contrato ya verifica la aserción WebAuthn y esa curva contra el precompilado que comprobamos en Fuji. Falta desplegarlo y enchufarlo a la app: la firma con huella está construida, no en uso" |
 | EIP-712 | "Firma datos legibles off-chain: ve en texto claro qué prescribe y hasta cuándo, no una cadena hexadecimal" |
 | EAS | "La matrícula es una attestation revocable: si la pierde, deja de emitir al instante" |
 

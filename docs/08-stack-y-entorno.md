@@ -1,6 +1,6 @@
 # 08 — Stack y entorno
 
-Foundry para los contratos, Avalanche Fuji como red, React para las dos aplicaciones y Postgres para el payload cifrado. La abstracción de cuenta ERC-4337 (bundler, paymaster y passkeys) está elegida pero todavía no implementada: hoy las dos aplicaciones firman con una wallet inyectada EIP-1193 (`eip1193-signer.adapter.ts`), no con una smart account. La regla que gobierna cada elección es la misma: si no se puede montar y demostrar en setenta y dos horas, no entra.
+Foundry para los contratos, Avalanche Fuji como red, React para las dos aplicaciones y Postgres para el payload cifrado. La abstracción de cuenta ERC-4337 está construida —cuenta con verificación P-256, paymaster, cliente de passkey y un relayer propio en lugar de un bundler de terceros— pero sin desplegar y sin cablear: hoy las dos aplicaciones firman con una wallet inyectada EIP-1193 (`eip1193-signer.adapter.ts`), no con una smart account. La regla que gobierna cada elección es la misma: si no se puede montar y demostrar en setenta y dos horas, no entra.
 
 ## Stack recomendado
 
@@ -9,11 +9,11 @@ Foundry para los contratos, Avalanche Fuji como red, React para las dos aplicaci
 | Red | Avalanche Fuji (chainId 43113) | Base Sepolia, Arbitrum Sepolia, Scroll Sepolia | Cadena EVM pública con RIP-7212 comprobado en vivo. Es una L1 independiente, no una L2 de Ethereum: ver la tabla de decisión de [01](01-arquitectura.md) |
 | Contratos | Solidity 0.8.x | — | Estándar del EVM |
 | Tooling de contratos | **Foundry** | Hardhat | `forge test` es rápido, el fuzzing viene incluido y las pruebas se escriben en Solidity, sin cambiar de lenguaje |
-| Cuenta | Smart account ERC-4337 con verificación P-256 — **elegido, no implementado**: hoy se firma con una wallet inyectada EIP-1193 | EIP-7702 | El médico no tiene wallet previa; 4337 no la exige |
-| Bundler y paymaster | Proveedor de infraestructura de account abstraction — **elegido, no implementado** | Bundler propio | Montar un bundler propio consume el buildathon entero |
+| Cuenta | Smart account ERC-4337 con verificación P-256 — **construida, sin desplegar ni cablear**: `PasskeyAccount.sol` y `PasskeyAccountFactory.sol` existen y pasan sus pruebas, pero no hay despliegue y hoy se firma con una wallet inyectada EIP-1193 | EIP-7702 | El médico no tiene wallet previa; 4337 no la exige |
+| Relayer y paymaster | **Propios**: `services/api/src/relayer/` y `contracts/src/PrescriptionPaymaster.sol` — **construidos, sin desplegar**: no hay paymaster en la cadena, ni depósito, ni stake | Proveedor de infraestructura de account abstraction | No hace falta un bundler ni un proveedor: `handleOps` del EntryPoint v0.7 es `public` y sin control de acceso —comprobado en Fuji—, así que el relayer envía cada operación directamente. No tiene mempool, ni agrupación, ni ERC-7562, ni reputación, ni stake, y por eso no se le llama bundler |
 | Credenciales | EAS v1.2.0 **desplegado por el propio proyecto** | Registro propio en Solidity | Avalanche no tiene despliegue oficial de EAS, así que lo desplegamos nosotros. Aun así gana al registro propio: esquema tipado, revocación y herramientas que ya existen, sin escribir contrato nuevo |
 | Frontend | React con TypeScript y Vite | Next.js | Dos SPA sencillas; no necesitamos renderizado en servidor |
-| Firma del usuario | WebAuthn del navegador (passkeys) — **elegido, no implementado**: hoy firma con `window.ethereum` a través de `eip1193-signer.adapter.ts` | Wallet de extensión | Ningún médico instalará una extensión |
+| Firma del usuario | WebAuthn del navegador (passkeys) — **construido, sin cablear**: el cliente está en `apps/doctor/src/infrastructure/passkey/` y la verificación en `WebAuthn.sol`, pero ninguna pantalla llama al puerto y hoy se firma con `window.ethereum` a través de `eip1193-signer.adapter.ts` | Wallet de extensión | Ningún médico instalará una extensión |
 | QR | Biblioteca de generación y lectura en el navegador | App nativa | La cámara del navegador basta |
 | Backend | Node con TypeScript | Go, Python | Comparte tipos con el frontend y acelera el desarrollo |
 | Almacenamiento del payload | Postgres | IPFS (Kubo), almacenamiento de objetos | Ver [D-08](05-almacenamiento-y-cifrado.md) |
@@ -41,7 +41,12 @@ Foundry para los contratos, Avalanche Fuji como red, React para las dos aplicaci
 proyecto_recetas/
 ├─ contracts/                # Foundry project
 │  ├─ src/
-│  │  └─ PrescriptionRegistry.sol
+│  │  ├─ PrescriptionRegistry.sol
+│  │  ├─ PrescriptionPaymaster.sol
+│  │  ├─ PasskeyAccount.sol
+│  │  ├─ PasskeyAccountFactory.sol
+│  │  ├─ WebAuthn.sol
+│  │  └─ P256.sol
 │  ├─ test/
 │  │  ├─ PrescriptionRegistry.t.sol
 │  │  └─ invariants/
@@ -51,10 +56,10 @@ proyecto_recetas/
 │  │  └─ Deploy.s.sol
 │  └─ foundry.toml
 ├─ apps/
-│  ├─ doctor/                # React SPA
+│  ├─ doctor/                # React SPA; incluye el cliente de passkey (infrastructure/passkey)
 │  └─ pharmacy/              # React SPA
 ├─ services/
-│  └─ api/                   # Node + TypeScript BFF
+│  └─ api/                   # Node + TypeScript BFF; incluye el relayer (src/relayer)
 ├─ packages/
 │  ├─ crypto/                # envelope encryption helpers
 │  ├─ rules/                 # deterministic clinical rules
@@ -62,7 +67,7 @@ proyecto_recetas/
 └─ docs/
 ```
 
-> `PrescriptionPaymaster.sol` no está en el árbol de arriba porque no existe todavía: el paymaster y el bundler son una decisión tomada (ver la tabla de arriba), no un contrato construido.
+> Que un archivo esté en el árbol significa que existe y pasa sus pruebas, no que esté desplegado. De `contracts/src/`, lo único desplegado en Fuji es `PrescriptionRegistry.sol`, con el EAS propio y los dos esquemas de credencial ([19](19-despliegue.md)). `PrescriptionPaymaster.sol`, `PasskeyAccount.sol` y su fábrica no tienen dirección en ninguna cadena, y el relayer solo se registra cuando el entorno le da una clave, un registro y un paymaster (`env.example`).
 
 ## Entornos
 
@@ -104,7 +109,7 @@ proyecto_recetas/
 |---|---|
 | Sin conectividad en la sala | Grabación en vídeo del flujo completo, lista para reproducir |
 | El explorador de bloques va lento | Capturas de pantalla preparadas del evento y del `revert` |
-| El proveedor de bundler falla | Segunda cuenta configurada con un proveedor alternativo |
+| El RPC de Fuji responde lento o no responde | Segundo punto de acceso RPC configurado. No hay proveedor de bundler que pueda fallar: el relayer es propio y la demo de hoy ni siquiera lo usa |
 | La cámara del portátil no lee el QR | Código introducible a mano en la aplicación de farmacia |
 | La transacción tarda más de lo previsto | Ensayar el guion asumiendo el peor tiempo medido |
 
