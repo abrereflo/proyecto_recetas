@@ -89,6 +89,8 @@ Identificadores únicos en todo el conjunto documental.
 | D-26 | Integración con el software de gestión de farmacia | [09](09-roadmap.md) |
 | D-27 | Presentarse al bounty de Avalanche | [15](15-track-y-entrega.md) |
 | D-28 | Canal real de inscripción y entrega | [15](15-track-y-entrega.md) |
+| D-29 | Tipo de farmacia en la credencial | [02](02-roles-y-permisos.md) |
+| D-30 | Identidad del operador que dispensa | [02](02-roles-y-permisos.md) |
 | D-31 | Cuándo se corta el andamiaje de extensión hacia passkey | [21](21-acceso-para-la-demo.md) |
 
 ## Siguiente paso
