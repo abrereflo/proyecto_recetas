@@ -43,15 +43,9 @@ version = "=0.8.24"
 [profile.ci]
 verbosity = 3
 fuzz = { runs = 1024 }
-invariant = { runs = 256, depth = 64 }
 
 [fuzz]
 runs = 256
-
-[invariant]
-runs = 64
-depth = 32
-fail_on_revert = false
 
 [fmt]
 line_length = 110

@@ -12,15 +12,20 @@ La lista operativa del buildathon. El orden no es negociable y sale de [16](16-p
 
 Prerequisito de todo lo demás. **No es progreso hacia la demo**: que Docker levante no acerca ni un minuto el pitch. Se paga una vez y se olvida.
 
-- [ ] Instalar pnpm — `corepack enable` requiere administrador en Windows; mientras tanto sirve `corepack pnpm <cmd>`
+- [x] pnpm 9.12.3 en el `PATH` del host, instalado con `npm i -g pnpm@9.12.3` — esa ruta no exige administrador, a diferencia de `corepack enable`
+- [x] Foundry 1.8.1 en el host (`forge`, `cast`, `anvil` en `~/.foundry/bin`, ya en el `PATH` de usuario) — mismo commit `982849d3` que la imagen `ghcr.io/foundry-rs/foundry:latest` del servicio `anvil`, para que el bytecode salga igual se compile donde se compile
+- [x] Dependencias de contratos instaladas: `forge-std`, `eas-contracts@v1.2.0` y `openzeppelin-contracts@v4.9.3`. `contracts/lib/` está en `.gitignore` y no viene con el clon, así que `forge build` falla hasta instalarlas y los scripts de EAS ni siquiera compilan
 - [x] Workspace pnpm en la raíz con `apps/*`, `services/*`, `packages/*`
 - [x] `tsconfig.base.json` con `strict: true` y rutas a `@recetas/shared`, `@recetas/crypto`, `@recetas/rules`
 - [x] `docker compose up -d` levanta Postgres y Anvil
 - [x] `env.example` con `DATABASE_URL`, `RPC_URL`, `FUJI_RPC_URL`
 - [ ] Obtener AVAX de testnet de Fuji en la cuenta de despliegue
-- [ ] Confirmar acceso al RPC público de Fuji (`https://api.avax-test.network/ext/bc/C/rpc`) con reintentos con backoff
+- [x] Acceso al RPC público de Fuji (`https://api.avax-test.network/ext/bc/C/rpc`) comprobado el 12/09/2026: `eth_chainId` devuelve `0xa869`, que es 43113, y `eth_blockNumber`, `0x37a2d0b`
+- [x] Recuperación ante un RPC que se cae a mitad del despliegue, documentada en [19](19-despliegue.md): Foundry no reintenta el broadcast, se reenvía con `--resume`
 
-> Regla general, no medición: ningún RPC público es fiable al cien por cien, y todo script de despliegue debe reintentar con backoff, porque un fallo aislado no es evidencia de que algo esté roto. La disponibilidad del RPC de Fuji **no se ha medido**; lo que se midió en [16](16-plan-de-ejecucion.md) fue otra red y ese dato no se traslada.
+> Ningún RPC público es fiable al cien por cien, pero **Foundry no hace backoff en el broadcast y no hay flag que lo active**: `--retries` y `--delay` son reintentos del *verificador* de código fuente en el explorador, con cinco intentos por defecto, y no tocan el envío de la transacción. Lo que sí existe es `--resume`, que reenvía las transacciones que quedaron pendientes o caídas sin volver a simular el script, y `--rpc-timeout`, que impide que la espera se cuelgue sin límite. El procedimiento está en [19](19-despliegue.md).
+>
+> La comprobación del 12/09/2026 dice que el RPC responde, no que sea fiable: la disponibilidad sostenida **no se ha medido**, y lo que se midió en [16](16-plan-de-ejecucion.md) fue otra red y ese dato no se traslada.
 
 **Criterio de salida:** `docker compose up -d` levanta la infraestructura y `pnpm install` termina sin errores.
 
@@ -29,18 +34,18 @@ Prerequisito de todo lo demás. **No es progreso hacia la demo**: que Docker lev
 Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 
 - [x] `contracts/` inicializado con Foundry
-- [x] `PrescriptionRegistry.sol` con `enum PrescriptionStatus { None, Issued, Dispensed, Cancelled }`
-- [x] Struct EIP-712 `Prescription` y dominio `RecetaVerificable` v1, chainId 43113
+- [x] `enum PrescriptionStatus { None, Issued, Dispensed, Cancelled }` — declarado en `IPrescriptionRegistry.sol`, que `PrescriptionRegistry.sol` importa
+- [x] Struct EIP-712 `Prescription` y dominio `RecetaVerificable` v1 — **no hay una sola línea de EIP-712 en `contracts/`**: vive en `packages/shared/src/eip712.ts`, porque la firma es off-chain ([01](01-arquitectura.md)) y la verificación on-chain se descartó a propósito ([04](04-smart-contracts.md)). El 43113 es el valor por defecto de `prescriptionDomain`, que `domainFor` sobrescribe siempre con la chainId del despliegue vivo, hoy 31337
 - [x] `issue(contentHash, patientCommitment, expiresAt)`
 - [x] `dispense(contentHash)`
 - [x] `cancel(contentHash)` restringido al prescriptor y solo antes de dispensar
 - [x] `verify(contentHash)` devolviendo `(status, dispensable, prescriber, expiresAt)`
-- [x] Los nueve errores personalizados de [04](04-smart-contracts.md), con `AlreadyDispensed` devolviendo `dispensedBy` y `dispensedAt`
+- [x] Los nueve errores de ciclo de vida de [04](04-smart-contracts.md), con `AlreadyDispensed` devolviendo `dispensedBy` y `dispensedAt`. El contrato declara **dieciséis**: esos nueve más los siete de credencial que [04](04-smart-contracts.md) también exige
 - [x] Eventos `PrescriptionIssued` y `PrescriptionDispensed`
 - [x] **`test_dispense_twice_reverts` pasando**
 - [x] Test de caducidad con `vm.warp`
 - [x] Test de cancelación por quien no es el prescriptor
-- [x] Invariante con fuzzing: ninguna secuencia de llamadas saca una receta de `Dispensed`
+- [x] Fuzz acotado sobre el estado absorbente: `testFuzz_never_leaves_dispensed`, 256 pasadas. **No es un invariant test de Foundry** — no existe ninguna función `invariant_` ni `StdInvariant` en `contracts/test/` — y no prueba «ninguna secuencia»: fuzzea el llamante y el salto temporal sobre una secuencia fija `dispense` → `cancel`, nunca llama a `issue`, y el `uint16 elapsed` topea el salto en 18,2 horas contra una caducidad de 30 días, así que jamás alcanza la rama de caducada
 
 **Criterio de salida:** `forge test` en verde, con `test_dispense_twice_reverts` incluida. Si esa prueba falla, no hay proyecto.
 
@@ -53,7 +58,9 @@ Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 
 **Criterio de salida:** dirección pública y explorable. Desbloquea todo lo que necesita hablar contra un contrato real.
 
-> El guion de despliegue ya no es un salto al vacío: se ejecutó contra un nodo real (Anvil, chainId 31337) y el ciclo completo de la demo funcionó sobre el contrato desplegado. Lo que falta para Fuji es exclusivamente credenciales y fondos, no código.
+> **El orden de esta lista ya no se sostiene: la Fase 2 no puede ir antes que la 3.** `script/Deploy.s.sol` revierte fuera de la chain 31337 si falta `EAS_ADDRESS`, cualquiera de los dos uids de esquema o `ISSUER_AUTHORITY` (`MissingEasAddress`, `MissingPractitionerSchema`, `MissingPharmacySchema`, `MissingIssuerAuthority`, líneas 57-60), y esos cuatro valores los producen `DeployEAS.s.sol` y `RegisterSchemas.s.sol`, que esta lista archiva en la Fase 3. Antes de la migración no era así: EAS venía dado por la red y la Fase 2 era autónoma. La secuencia real en Fuji es cuenta financiada → `DeployEAS` → `RegisterSchemas` → `Deploy`.
+
+> El guion de despliegue ya no es un salto al vacío: se ejecutó contra un nodo real (Anvil, chainId 31337) y el ciclo completo de la demo funcionó sobre el contrato desplegado. Lo que falta para Fuji no es solo fondos: hace falta una cuenta de despliegue financiada, una `ISSUER_AUTHORITY` cuya clave se controle, y el EAS propio desplegado **antes** — ver la nota de orden aquí abajo.
 
 > **La verificación del código fuente está sin comprobar.** Fuji es de tier pago en Etherscan V2, así que la key gratuita de Etherscan no sirve y `[etherscan]` apunta a Routescan (`https://api.routescan.io/v2/network/testnet/evm/43113/etherscan`, con la key literal `verifyContract`). Esa configuración **no se ha probado todavía contra un despliegue real**: hasta que `--verify` funcione una vez en Fuji, es un supuesto, no un hecho. El explorador de referencia es `https://testnet.snowtrace.io`.
 

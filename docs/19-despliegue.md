@@ -41,6 +41,26 @@ forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify
 
 Tras desplegar, confirmar que `EAS.version()` y `SchemaRegistry.version()` devuelven `1.2.0`, y que `EAS.getSchemaRegistry()` apunta al registro desplegado junto a ella. Es la comprobación barata de que lo desplegado es lo esperado.
 
+### Si el RPC se cae a mitad del despliegue
+
+**Foundry no reintenta el envío, y no hay ninguna opción que lo active.** Conviene decirlo explícitamente porque los dos flags que lo parecen no lo son: `--retries` y `--delay` gobiernan los reintentos del *verificador* de código fuente en el explorador —cinco intentos por defecto— y no tocan el broadcast. Un RPC público que deja de responder a mitad de `forge script` corta el despliegue ahí.
+
+Lo que sí existe son estas tres piezas, y son las que hay que usar:
+
+| Pieza | Qué hace |
+|---|---|
+| `--resume` | Reenvía las transacciones que quedaron pendientes o caídas del último intento. **No vuelve a simular el script** y da por hecho que los nonces no cambiaron |
+| `--rpc-timeout <segundos>` | Corta la espera de una petición RPC en vez de colgarse sin límite. También `ETH_RPC_TIMEOUT` |
+| `--timeout <segundos>` | Lo mismo para la espera del broadcast. También `ETH_TIMEOUT` |
+
+El procedimiento ante un corte es reejecutar el **mismo** comando con `--resume` añadido:
+
+```bash
+forge script script/DeployEAS.s.sol --rpc-url fuji --broadcast --resume
+```
+
+> **No se relanza un despliegue a medias sin `--resume`.** Sin él, el script se simula de cero y vuelve a enviar transacciones que quizá ya se minaron: en `DeployEAS.s.sol` eso significa un `SchemaRegistry` y un `EAS` duplicados, y una dirección anotada en el entorno que no es la que quedó viva. Y como `--resume` exige que los nonces sigan como estaban, esa cuenta de despliegue no se usa para nada más mientras haya un despliegue sin terminar.
+
 ### Verificación de contratos en el explorador
 
 El explorador de Fuji es `https://testnet.snowtrace.io`. **Avalanche Fuji es de tier pago en Etherscan V2**, así que la key gratuita de Etherscan no verifica aquí. `contracts/foundry.toml` apunta la verificación a **Routescan**, que expone una API compatible con Etherscan y acepta la cadena literal `verifyContract` como key:
@@ -191,4 +211,4 @@ Esto revierte el código, no el esquema: `drizzle-kit push` solo aplica hacia ad
 
 ## Siguiente paso
 
-No hay una fase posterior a esta en la documentación: el despliegue es el punto de llegada del pipeline descrito en [09](09-roadmap.md) y [16](16-plan-de-ejecucion.md). Ante cualquier cambio de infraestructura, este documento es el que se actualiza primero.
+El despliegue es el punto de llegada del pipeline descrito en [09](09-roadmap.md) y [16](16-plan-de-ejecucion.md), y ante cualquier cambio de infraestructura este documento es el que se actualiza primero. Lo que queda después no es una fase más, sino el manual de puesta en marcha del puesto de trabajo: [20](20-wallet-y-red-de-pruebas.md) cubre la extensión del navegador, la red que hay que agregar a mano, los AVAX de prueba de la cuenta de despliegue y la acreditación de las cuentas que firman.

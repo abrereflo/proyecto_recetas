@@ -70,12 +70,6 @@ contract MockEAS is IEAS {
         _revoke(uid, uint64(block.timestamp));
     }
 
-    /// @notice Revokes at an arbitrary timestamp.
-    function revokeAt(bytes32 uid, uint64 revocationTime) external {
-        require(revocationTime != 0, "MockEAS: zero revocationTime");
-        _revoke(uid, revocationTime);
-    }
-
     /// @inheritdoc IEAS
     function getAttestation(bytes32 uid) external view returns (Attestation memory) {
         return _attestations[uid];

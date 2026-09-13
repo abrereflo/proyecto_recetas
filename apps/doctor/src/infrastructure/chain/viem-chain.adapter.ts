@@ -30,13 +30,8 @@ import {
   type IssueRequest,
 } from '../../ports/chain.port';
 import type { DoctorConfig } from '../config/env';
-import { SignerRejectedError } from '../../ports/signer.port';
-import {
-  USER_REJECTED,
-  errorCode,
-  injectedProvider,
-  type Eip1193Provider,
-} from '../signer/eip1193-signer.adapter';
+import { SignerRejectedError, type SignerPort } from '../../ports/signer.port';
+import { USER_REJECTED, errorCode } from '../eip1193-errors';
 
 /**
  * `ChainPort` over viem.
@@ -59,8 +54,14 @@ import {
 export interface ViemChainAdapterOptions {
   config: DoctorConfig;
   publicClient?: PublicClient;
-  /** Resolved lazily so a provider injected after load is still picked up. */
-  getProvider?: () => Eip1193Provider | undefined;
+  /**
+   * The write path's only source of a provider (Corte 2,
+   * docs/21-acceso-para-la-demo.md). This adapter never reaches for
+   * `window.ethereum` on its own: it asks the port, so a different signer —
+   * the ERC-4337/passkey one of D-04 — is a change to the composition root,
+   * not to this file.
+   */
+  signer: Pick<SignerPort, 'getProvider'>;
   /**
    * First block scanned by `issuedBy`. The registry did not exist before its
    * deployment block, so scanning from zero is only wasted work; a public RPC
@@ -75,9 +76,8 @@ const PRESCRIPTION_ISSUED_EVENT = getAbiItem({
 });
 
 export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainPort {
-  const { config } = options;
+  const { config, signer } = options;
   const publicClient = options.publicClient ?? buildPublicClient(config);
-  const getProvider = options.getProvider ?? injectedProvider;
   const fromBlock = options.fromBlock ?? 0n;
 
   const registry = {
@@ -181,7 +181,7 @@ export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainP
     },
 
     async issue(request: IssueRequest): Promise<IssueReceipt> {
-      const provider = getProvider();
+      const provider = signer.getProvider();
       if (provider === undefined) {
         throw new Error('Este equipo no tiene configurada una cuenta médica para firmar.');
       }
