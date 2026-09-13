@@ -40,6 +40,17 @@ version = "=0.8.24"
 paths = "script/SetupCredentials.s.sol"
 version = "=0.8.24"
 
+# IssueCredential.s.sol imports BOTH sides: `src/PrescriptionRegistry.sol`, which
+# is pinned above at 0.8.24, and `@eas/IEAS.sol`. It can be pinned at 0.8.24 —
+# unlike DeployEAS.s.sol and RegisterSchemas.s.sol, which are left unrestricted
+# at `^0.8.19` — because it imports only EAS *interfaces* (`IEAS.sol`,
+# `Common.sol`, `ISchemaRegistry.sol`, `resolver/ISchemaResolver.sol`), and every
+# one of those declares a floating `pragma solidity ^0.8.0`. The two files that
+# force 0.8.19 are the implementations, `EAS.sol` and `SchemaRegistry.sol`, and
+# this script never reaches them.
+[[profile.default.compilation_restrictions]]
+paths = "script/IssueCredential.s.sol"
+version = "=0.8.24"
 
 
 [profile.ci]

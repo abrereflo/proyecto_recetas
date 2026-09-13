@@ -21,25 +21,60 @@ Avalanche **no tiene un despliegue oficial de EAS**: el repositorio `ethereum-at
 
 El orden importa y no es una preferencia: `EAS` recibe el `SchemaRegistry` en el constructor y revierte con la dirección cero, así que el registro va primero y queda inmutable dentro de EAS. Cambiar de `SchemaRegistry` más tarde obliga a desplegar un `EAS` nuevo.
 
+#### Antes de ejecutar nada: el `.env` de la raíz no llega solo
+
+Este paso no es cosmético y costó tiempo real la primera vez. **Foundry carga `.env` desde la raíz del proyecto Foundry —`contracts/`, donde vive `foundry.toml`— y no desde la raíz del repositorio, que es donde este proyecto tiene su `.env`.** Y `contracts/` no tiene un `.env` propio. La consecuencia es silenciosa: `${FUJI_RPC_URL}` y `${ROUTESCAN_API_KEY}` de `[rpc_endpoints]` y `[etherscan]` se resuelven a la cadena vacía, y `--rpc-url fuji` falla sin decir en ningún momento que el problema es una variable sin valor. El arreglo es exportar el `.env` de la raíz al shell antes de llamar a `forge`:
+
+```bash
+cd contracts
+set -a; . ../.env; set +a
+```
+
+Falta una segunda pieza, igual de silenciosa. Los tres scripts llaman a `vm.broadcast()` y `vm.startBroadcast()` **sin argumento de clave**, así que Foundry no deduce de ninguna parte con qué cuenta firmar: la clave del desplegador se pasa en la línea de comandos, `--private-key "$DEPLOYER_PRIVATE_KEY"`, en cada uno de los tres comandos.
+
 ```bash
 # 1. EAS propio. Imprime SchemaRegistry y EAS; se niega a correr en chainId 31337,
 #    donde la demo local ya usa MockEAS.
-forge script script/DeployEAS.s.sol --rpc-url fuji --broadcast
+forge script script/DeployEAS.s.sol --rpc-url fuji --broadcast \
+  --private-key "$DEPLOYER_PRIVATE_KEY"
 
 # 2. Los dos esquemas de credencial. Imprime sus uids. Es idempotente: si ya
 #    estaban registrados, los informa en vez de abortar.
 SCHEMA_REGISTRY_ADDRESS=0x... \
-forge script script/RegisterSchemas.s.sol --rpc-url fuji --broadcast
+forge script script/RegisterSchemas.s.sol --rpc-url fuji --broadcast \
+  --private-key "$DEPLOYER_PRIVATE_KEY"
 
 # 3. El registro, con EAS y los dos uids como argumentos de constructor.
 EAS_ADDRESS=0x... PRACTITIONER_SCHEMA_UID=0x... PHARMACY_SCHEMA_UID=0x... \
 ISSUER_AUTHORITY=0x... \
-forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify
+forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify \
+  --private-key "$DEPLOYER_PRIVATE_KEY"
 ```
 
 > **Los uids de los esquemas no son los de la demo local.** `contracts/script/LocalDemo.sol` usa `keccak256(declaración)` como stand-in sobre Anvil; el `SchemaRegistry` real deriva el uid de `keccak256(abi.encodePacked(schema, resolver, revocable))`. Son números distintos. Los únicos válidos en una red pública son los que imprime `RegisterSchemas.s.sol`, y son los que entran en `PRACTITIONER_SCHEMA_UID` y `PHARMACY_SCHEMA_UID`. Poner los locales por error produce un registro cuyas comprobaciones de credencial no pueden pasar nunca.
 
 Tras desplegar, confirmar que `EAS.version()` y `SchemaRegistry.version()` devuelven `1.2.0`, y que `EAS.getSchemaRegistry()` apunta al registro desplegado junto a ella. Es la comprobación barata de que lo desplegado es lo esperado.
+
+### El primer despliegue real: direcciones del 13/09/2026
+
+Los tres scripts se ejecutaron en ese orden contra Avalanche Fuji, chainId 43113. Estos son los valores que produjeron, y son los que hay que volcar al entorno:
+
+| Pieza | Dirección o uid |
+|---|---|
+| `SchemaRegistry` | `0xD4aFA6F68be2eb0c99D3B421B7f52a6420217efb` |
+| `EAS` v1.2.0 (propio) | `0x27781D2242a68e4D234bc0A5a15333D0CD80c58A` |
+| `PrescriptionRegistry` | `0xD5F2d5aD03703a9Ee11078d86181421E2E078365` — código fuente verificado |
+| `PRACTITIONER_SCHEMA_UID` | `0x5b8d9aff12e1409f3603c9bcca659c1e1dc8d8b4faf219b674d743f6ec54f233` |
+| `PHARMACY_SCHEMA_UID` | `0xac44c9573bebb0b5622ea078c08bea286ad1d99566d317a32393a9e71fbff500` |
+| `ISSUER_AUTHORITY` | `0x613F14B919317b515D8804915a8E82f926C86c0C` |
+
+Explorador: <https://testnet.snowscan.xyz/address/0xd5f2d5ad03703a9ee11078d86181421e2e078365>.
+
+Las comprobaciones de arriba pasaron todas: `EAS.version()` y `SchemaRegistry.version()` devuelven `1.2.0`, `EAS.getSchemaRegistry()` apunta al `SchemaRegistry` de la tabla, y `registry.eas()`, `registry.issuerAuthority()`, `registry.practitionerSchema()` y `registry.pharmacySchema()` coinciden uno a uno con los valores anotados.
+
+> **El coste no era el obstáculo que la documentación suponía.** Los tres despliegues juntos, verificación incluida, costaron **menos de 0,001 AVAX**: la cuenta de despliegue pasó de 3,5 a 3,499017 AVAX. El grifo de Fuji cubre el procedimiento entero muchas veces, así que financiar la cuenta nunca fue el bloqueante real; el bloqueante era tener la cuenta y su clave.
+
+> **`ISSUER_AUTHORITY` es hoy la propia cuenta de despliegue, y eso es deuda aceptada del MVP.** El proyecto solo controla una clave, así que desplegador y autoridad emisora colapsan en la misma dirección. `env.example` describe la separación deseada —una autoridad aparte, un multisig en el piloto— y esa separación sigue siendo el objetivo; simplemente no está en este despliegue. Conviene saberlo antes de tocar nada: `PrescriptionRegistry.issuerAuthority` es `immutable` (`contracts/src/PrescriptionRegistry.sol`, línea 50) y `_readCredential` rechaza cualquier attestation cuyo `attester` no sea exactamente esa dirección, así que un valor equivocado ahí no se corrige con una transacción de administración: se corrige redesplegando el registro entero. En la preparación de este despliegue, el `.env` de la raíz llevaba una `ISSUER_AUTHORITY` con un sufijo `est` pegado al final de una dirección por lo demás válida; la dirección resultante era sintácticamente correcta y de una clave que el proyecto no posee. Desplegar con ella habría dejado el registro sin ninguna cuenta capaz de acreditar a nadie, para siempre.
 
 ### Si el RPC se cae a mitad del despliegue
 
@@ -71,7 +106,145 @@ forge verify-contract <address> <contract> --chain 43113 \
   --etherscan-api-key verifyContract
 ```
 
-> `PENDIENTE DE COMPROBACIÓN EMPÍRICA.` Ese endpoint no se ha ejercitado todavía. Confirmarlo en el primer despliegue en Fuji y corregir `contracts/foundry.toml` si difiere. No damos por buena la verificación hasta verla funcionar.
+> **Comprobado el 13/09/2026: funciona tal como está escrito.** El endpoint se ejercitó en el primer despliegue real con `forge script ... --verify` y no hubo que corregir nada de `contracts/foundry.toml`, la key literal `verifyContract` incluida. El envío no responde de inmediato: la petición queda unos quince segundos en `Pending in queue` y después devuelve `Pass - Verified`. Un `--verify` que parece colgado durante ese rato está funcionando, no fallando. Forge envía además el código a **Sourcify** en paralelo y por su cuenta, sin configuración adicional.
+
+> **Los dos exploradores sirven el mismo código verificado.** Snowtrace hoy funciona sobre Routescan y comparte con él la verificación, así que verificar una vez basta para ambos: consultando `module=contract&action=getsourcecode` contra `https://api.routescan.io/v2/network/testnet/evm/43113/etherscan/api` y contra `https://api-testnet.snowtrace.io/api`, las dos APIs devuelven `PrescriptionRegistry` con el código fuente presente. Las referencias a `testnet.snowtrace.io` que hay en la documentación y en la configuración siguen siendo correctas y no hay nada que cambiar.
+
+## Acreditar cuentas en Fuji
+
+Sin credencial no hay demo: `issue` revierte con `NotAccreditedPractitioner` y `dispense` con `NotAccreditedPharmacy`. Esta sección es el procedimiento completo para acreditar una cuenta en la red pública.
+
+Las dos herramientas que acreditan cuentas en la demo local **no sirven aquí, y es deliberado**. `contracts/script/SetupCredentials.s.sol` revierte con `NotTheLocalChain` fuera de la chainId 31337 y firma con una constante de compilación (`LocalDemo.ISSUER_AUTHORITY_KEY`, la cuenta #9 de Anvil), que no es la `ISSUER_AUTHORITY` de Fuji; y el comando `receta setup-credentials` está cerrado por tres sitios a la vez: `assertLocalChain` solo acepta 31337 y 1337, `assertLocalEas` exige que el EAS sea el mock, y `issueAndRegister` llama a `attestWithUid`, una función que solo existe en `MockEAS` y que un EAS v1.2.0 real no expone.
+
+### Dos transacciones, dos claves distintas, y esa es la arquitectura
+
+Acreditar a alguien **nunca** es una sola transacción, y no por comodidad:
+
+1. **La autoridad emite.** `ISSUER_AUTHORITY` firma un `EAS.attest()` que declara «esta dirección es un médico con matrícula vigente». Nadie más puede: `registerCredential` exige `attester == issuerAuthority`, y ese valor es `immutable` en el registro.
+2. **El titular se registra.** El propio titular firma `registerCredential(uid)` con su clave. La autoridad **no puede hacerlo en su nombre**, porque el contrato compara `a.recipient == msg.sender`.
+
+Ese segundo paso es lo que [04](04-smart-contracts.md) llama auto-registro y lo que mantiene al sistema sin administrador ([D-14](04-smart-contracts.md)): el registro nunca acepta la palabra de la autoridad sobre quién es el que llama. Un `uid` falso no sirve de nada, porque las cinco comprobaciones contra EAS lo tumban; por eso el permiso para escribir en `credentialOf` puede estar abierto a cualquiera.
+
+### Paso 1 — la autoridad emite: `IssueCredential.s.sol`
+
+`contracts/script/IssueCredential.s.sol` hace exactamente una cosa: una llamada a `EAS.attest()`. **No lee, deriva ni imprime ninguna clave privada.** Usa `vm.broadcast()` sin argumento, el mismo patrón que `Deploy.s.sol`, de modo que Foundry recibe el firmante en la línea de comandos (`--private-key`, `--account`, `--interactive` o `--ledger`) y la clave de la autoridad nunca entra en el repositorio. Esa es la regla que `SetupCredentials.s.sol` enuncia en sus líneas 18-22: entregarle la clave de la autoridad a un script es cómo una autoridad de credenciales deja de serlo.
+
+Antes de gastar gas, el script se niega a correr si algo no cuadra, con errores nombrados:
+
+| Comprobación | Error si falla |
+|---|---|
+| No es la chainId 31337 | `LocalChainUsesSetupCredentials` — para Anvil está `SetupCredentials.s.sol` |
+| `EAS_ADDRESS` y `PRESCRIPTION_REGISTRY_ADDRESS` presentes y con código | `MissingEasAddress`, `MissingRegistryAddress`, `NoCodeAtEas`, `NoCodeAtRegistry` |
+| El EAS configurado es el que el registro lleva dentro | `EasMismatch` |
+| El uid de esquema del entorno coincide con el `immutable` del registro | `SchemaMismatch` |
+| **La cuenta que va a firmar es `registry.issuerAuthority()`** | `NotTheIssuerAuthority`, nombrando ambas direcciones |
+| `validUntil` está en el futuro | `ValidUntilAlreadyPast` |
+
+La comprobación de la autoridad es la que más ahorra: firmar con otra cuenta produce una attestation perfectamente válida en EAS que el registro rechazará siempre, y no hay forma de arreglarla después — solo emitir otra.
+
+Variables que lee del entorno:
+
+| Variable | Obligatoria | Notas y valor por defecto |
+|---|---|---|
+| `EAS_ADDRESS`, `PRESCRIPTION_REGISTRY_ADDRESS` | Sí | — |
+| `CREDENTIAL_ROLE` | Sí | `practitioner` o `pharmacy`; cualquier otra cosa aborta |
+| `CREDENTIAL_HOLDER` | Sí | Dirección del titular |
+| `PRACTITIONER_SCHEMA_UID` / `PHARMACY_SCHEMA_UID` | Sí, según el rol | — |
+| `CREDENTIAL_VALID_UNTIL` | No | Unix absoluto; si está, manda |
+| `CREDENTIAL_VALIDITY_DAYS` | No | `365`, la misma vigencia que concede la demo local |
+| `PRACTITIONER_LICENSE_NUMBER`, `PRACTITIONER_SPECIALTY_CODE` | No | Vacío, con aviso en pantalla |
+| `PHARMACY_LICENSE`, `PHARMACY_SANITARY_REGISTRY_REF` | No | Vacío, con aviso en pantalla |
+
+```bash
+cd contracts
+set -a; . ../.env; set +a
+
+# Ensayo primero: sin --broadcast no se envía nada. --sender basta, no hace
+# falta la clave, porque la comprobación de autoridad mira quién firmaría.
+CREDENTIAL_ROLE=practitioner CREDENTIAL_HOLDER=0x... \
+PRACTITIONER_LICENSE_NUMBER=MP-12345 PRACTITIONER_SPECIALTY_CODE=A01 \
+forge script script/IssueCredential.s.sol --rpc-url fuji \
+  --sender "$ISSUER_AUTHORITY"
+
+# De verdad. Hoy la autoridad emisora y la cuenta de despliegue son la misma
+# dirección, así que la clave es DEPLOYER_PRIVATE_KEY; el día que se separen,
+# aquí va la de la autoridad y no la del desplegador.
+CREDENTIAL_ROLE=practitioner CREDENTIAL_HOLDER=0x... \
+PRACTITIONER_LICENSE_NUMBER=MP-12345 PRACTITIONER_SPECIALTY_CODE=A01 \
+forge script script/IssueCredential.s.sol --rpc-url fuji --broadcast \
+  --private-key "$DEPLOYER_PRIVATE_KEY"
+```
+
+> Una autoridad que viva en una billetera de hardware o en un keystore no obliga a tocar el script: `--ledger`, `--account <nombre>` o `--interactive` en lugar de `--private-key`. Es exactamente la razón de que el firmante llegue por la línea de comandos y no por el entorno.
+
+> **`data` no va vacío, y conviene saber por qué.** El registro nunca decodifica ese campo —lee `schema`, `recipient`, `attester`, `revocationTime` y `expirationTime`, nada más—, así que `bytes("")` pasaría hoy todas las comprobaciones. También publicaría una credencial que no dice nada: los esquemas de [03](03-modelo-de-datos.md) declaran matrícula y especialidad precisamente para que un verificador externo pueda responder «¿qué profesional es este y bajo qué matrícula?», que es la pregunta de la que [02](02-roles-y-permisos.md) cuelga toda la cadena de confianza ([D-05](02-roles-y-permisos.md)). El script codifica los campos declarados, en su orden, con `abi.encode`. Un matiz que hay que anotar: las declaraciones que registró `RegisterSchemas.s.sol` llevan delante el nombre del struct (`PractitionerCredential(string licenseNumber,...)`) en vez de la lista de campos pelada que parsea el tooling de EAS. On-chain da igual —EAS guarda la cadena y nunca la interpreta—, pero un explorador genérico de EAS no autodecodificará estas attestations.
+
+### El uid que imprime el script **no** es el uid de la cadena
+
+Esta es la trampa del procedimiento y hay que mirarla de frente antes de copiar nada.
+
+EAS calcula el uid *dentro* de la transacción, y `attestation.time` —que es `uint64(block.timestamp)` en el momento de ejecutar— forma parte de la preimagen (`EAS.sol:442` y `EAS.sol:698-713`). Un `forge script` congela el calldata durante la simulación, que corre contra el bloque del que hizo fork, y la transacción se mina después, en un bloque con otro timestamp. Todo lo demás de la preimagen es calldata congelado y viaja intacto; `time` no. **Los dos uids son distintos**, y un `registerCredential` construido con el de la simulación revierte con `CredentialNotFound` cuando el gas ya se gastó.
+
+En Anvil el problema no existe y por eso es fácil no verlo venir: `MockEAS` deriva su uid de un contador, no del reloj, que es justo lo que le permite a `SetupCredentials.s.sol` emitir y registrar en un solo script. Ese patrón no se puede trasladar a una red pública.
+
+El uid real se lee de la cadena, del evento `Attested`, donde `uid` es el único campo no indexado y por tanto es todo el `data` del log. Sin resolver en ninguno de los dos esquemas, la transacción emite ese log y ninguno más:
+
+```bash
+# Desde contracts/, sobre el artefacto que deja el propio forge script --broadcast
+jq -r --arg t '0x8bf46bf4cfd674fa735a3d63ec1c9ad4153f033c290341f3a588b75685141b35' \
+  '.receipts[-1].logs[] | select(.topics[0]==$t) | .data' \
+  broadcast/IssueCredential.s.sol/43113/run-latest.json
+
+# O, si se tiene el hash de la transacción a mano
+cast receipt <txhash> --rpc-url fuji --json | jq -r '.logs[0].data'
+```
+
+> Todos los comandos de esta sección se ejecutan desde `contracts/` y con el `.env` de la raíz exportado (`set -a; . ../.env; set +a`). El alias `fuji` de `--rpc-url` vive en `contracts/foundry.toml` y se resuelve a `${FUJI_RPC_URL}`: fuera de ese directorio, o sin esa variable, no existe.
+
+El propio script imprime esos comandos al terminar, con la dirección del registro y del titular ya sustituidas.
+
+### Paso 2 — el titular se registra: `cast send`, no un script
+
+**No hay un segundo script, y es una decisión, no una omisión.** Los titulares de este proyecto son cuentas de billetera de navegador ([20](20-wallet-y-red-de-pruebas.md)): sus claves viven dentro de una extensión, no en un keystore que Foundry pueda abrir. Un script para este paso existiría solo para que alguien le exporte una clave privada, que es el mismo error con otro sombrero. Y es una llamada con un argumento, así que `cast send` es más corto y más honesto:
+
+```bash
+cast send 0xD5F2d5aD03703a9Ee11078d86181421E2E078365 \
+  'registerCredential(bytes32)' <uid> \
+  --rpc-url fuji --private-key <clave-del-titular>
+```
+
+Como `PrescriptionRegistry` está verificado en el explorador, hay una vía todavía más natural para una cuenta de MetaMask: abrir la pestaña **Write Contract** en <https://testnet.snowtrace.io/address/0xD5F2d5aD03703a9Ee11078d86181421E2E078365>, conectar la billetera del titular y llamar a `registerCredential` desde ahí. Misma transacción, firmada por la misma cuenta, sin exportar nada.
+
+### Comprobar que la credencial quedó
+
+```bash
+REGISTRY=0xD5F2d5aD03703a9Ee11078d86181421E2E078365
+EAS=0x27781D2242a68e4D234bc0A5a15333D0CD80c58A
+
+# 1. El puntero. Debe devolver el uid, no ceros.
+cast call $REGISTRY 'credentialOf(address)(bytes32)' <titular> --rpc-url fuji
+
+# 2. La attestation detrás del puntero: recipient = titular,
+#    attester = ISSUER_AUTHORITY, revocationTime = 0, schema = el del rol.
+cast call $EAS \
+  'getAttestation(bytes32)((bytes32,bytes32,uint64,uint64,uint64,bytes32,address,address,bool,bytes))' \
+  <uid> --rpc-url fuji
+```
+
+Un `credentialOf` en ceros significa que el paso 2 no se ejecutó o revirtió. La prueba definitiva es funcional: con la credencial puesta, `issue` deja de revertir.
+
+### Revocar
+
+Revoca **la autoridad, en EAS**, no el registro. No existe función en `PrescriptionRegistry` para quitarle la credencial a nadie, y eso es intencionado ([D-14](04-smart-contracts.md)): el registro no tiene administrador.
+
+```bash
+cast send $EAS 'revoke((bytes32,(bytes32,uint256)))' "(<schema-uid>,(<uid>,0))" \
+  --rpc-url fuji --private-key <clave-de-la-autoridad>
+```
+
+El efecto es **inmediato y no hay que tocar nada más**. `_hasLiveCredential` vuelve a leer la attestation en cada llamada y nunca cachea el veredicto, así que en cuanto `revocationTime` deja de ser cero la siguiente emisión o dispensación revierte. `credentialOf` sigue apuntando al uid muerto, y da igual: el puntero es un puntero, no un permiso.
+
+Lo que la revocación **no** deshace: las recetas ya emitidas por esa cuenta siguen siendo válidas y dispensables hasta caducar. Retirar una licencia no anula las recetas escritas la semana anterior ([02](02-roles-y-permisos.md)). Renovar es emitir una attestation nueva y que el titular registre el uid nuevo, que reemplaza al anterior en `credentialOf`.
 
 ## Topología de servicios
 

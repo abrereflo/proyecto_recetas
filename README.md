@@ -177,6 +177,18 @@ valid on a public network. See [docs/19](docs/19-despliegue.md).
 attests in EAS, and each account registers the pointer itself. Nobody issues or
 dispenses without a live credential.
 
+> **That script is Anvil only.** `SetupCredentials.s.sol` reverts with
+> `NotTheLocalChain` off chainId 31337 and signs with a compile-time Anvil key,
+> and `receta setup-credentials` is gated to a local chain and to a
+> `MockEAS`-only call. On Fuji the same two steps are split across the two keys
+> that own them: the authority attests with
+> `script/IssueCredential.s.sol` — which reads no key, takes its signer from the
+> command line and refuses to run unless that signer is
+> `registry.issuerAuthority()` — and each holder then registers its own pointer
+> with a single `cast send 'registerCredential(bytes32)'`. Full procedure,
+> including how to read the real uid out of the `Attested` event and how
+> revocation works: [docs/19](docs/19-despliegue.md).
+
 ### Workspace scripts
 
 | Command | What it does |
@@ -246,8 +258,7 @@ These come from the architecture documents and a review that finds one violated 
 
 | Gap | Decision |
 |---|---|
-| EAS on Avalanche Fuji: the credential checks are live — `_isAccreditedPractitioner` and `_isAccreditedPharmacy` re-read the attestation on every call — and `DeployEAS.s.sol` / `RegisterSchemas.s.sol` exist and build, but neither has been run against Fuji yet, so the wired-up EAS address and schema uids are still Anvil-only | docs/19 — run both scripts on Fuji with a funded deployer, then copy the printed addresses and uids into the deployment |
-| Contract verification on Fuji: configured against Routescan because Fuji is a paid tier on Etherscan V2, but the endpoint has never been exercised | docs/19 — confirm on the first Fuji deployment and correct `contracts/foundry.toml` if it differs |
+| Accredited accounts on Fuji: the issuance path now exists — `script/IssueCredential.s.sol` attests as the authority, each holder then registers with one `cast send` — and simulates cleanly against the live registry, but it has never been broadcast, so `credentialOf` is still empty on Fuji and `issue` there still reverts. What is left is an operational step that needs the authority's key, not a missing tool | docs/19, ["Acreditar cuentas en Fuji"](docs/19-despliegue.md) |
 | ERC-4337 account abstraction; `permissionless.js` is not installed | docs/01, docs/08 |
 | DEK wrapping per recipient; the key travels unwrapped in the QR | D-24, [docs/05](docs/05-almacenamiento-y-cifrado.md) |
 | Drug-drug interactions; the MVP covers declared allergies and ATC duplication only | D-15, [docs/06](docs/06-validacion-clinica.md) |
