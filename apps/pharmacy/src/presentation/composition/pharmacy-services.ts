@@ -37,10 +37,10 @@ export interface PharmacyServices {
 }
 
 export function createPharmacyServices(config: PharmacyConfig): PharmacyServices {
-  const chain = createViemChainAdapter({ config });
+  const signer = createEip1193Signer({ config });
+  const chain = createViemChainAdapter({ config, signer });
   const documents = createHttpDocumentAdapter({ config });
   const signatures = createPrescriberSignatureVerifier(config);
-  const signer = createEip1193Signer();
 
   return {
     config,

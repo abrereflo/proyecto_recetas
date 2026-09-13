@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildChain, buildPublicClient } from './viem-chain';
+import { addEthereumChainParams, buildChain, buildPublicClient } from './viem-chain';
 
 /**
  * The chain is built from configuration, never from an imported `avalancheFuji`.
@@ -53,5 +53,44 @@ describe('buildPublicClient', () => {
 
   it('transports over the configured rpc url', () => {
     expect(buildPublicClient(ANVIL).transport['url']).toBe('http://localhost:8545');
+  });
+});
+
+describe('buildChain block explorers', () => {
+  it('exposes the Fuji testnet explorer', () => {
+    expect(buildChain(FUJI).blockExplorers?.default.url).toBe('https://testnet.snowtrace.io');
+  });
+
+  it('has no block explorer for the local chain', () => {
+    expect(buildChain(ANVIL).blockExplorers).toBeUndefined();
+  });
+});
+
+/**
+ * `wallet_addEthereumChain` (EIP-3085) parameters, derived from `buildChain`
+ * so the extension is never asked for a network this client actually talks to.
+ */
+describe('addEthereumChainParams', () => {
+  it('converts the chain id to a hex string', () => {
+    expect(addEthereumChainParams(FUJI).chainId).toBe('0xa869');
+  });
+
+  it('carries the same name, currency and rpc url as buildChain', () => {
+    const params = addEthereumChainParams(FUJI);
+
+    expect(params.chainName).toBe('Cadena 43113');
+    expect(params.nativeCurrency).toEqual({ name: 'Avalanche', symbol: 'AVAX', decimals: 18 });
+    expect(params.rpcUrls).toEqual(['https://api.avax-test.network/ext/bc/C/rpc']);
+  });
+
+  it('includes the Fuji block explorer', () => {
+    expect(addEthereumChainParams(FUJI).blockExplorerUrls).toEqual(['https://testnet.snowtrace.io']);
+  });
+
+  it('omits the block explorer for a chain with none, rather than [undefined]', () => {
+    const params = addEthereumChainParams(ANVIL);
+
+    expect(params).not.toHaveProperty('blockExplorerUrls');
+    expect(JSON.parse(JSON.stringify(params))).not.toHaveProperty('blockExplorerUrls');
   });
 });

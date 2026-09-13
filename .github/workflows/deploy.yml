@@ -5,7 +5,7 @@ on:
     branches:
       - main
   # PRs targeting main run ONLY the test job. The image build-push jobs and the
-  # droplet deploy job are gated to push events via job-level `if:` conditions
+  # server deploy job are gated to push events via job-level `if:` conditions
   # below, so they never run on a PR.
   pull_request:
     branches:
@@ -42,6 +42,76 @@ jobs:
 
       - name: Test
         run: pnpm -r test
+
+  contracts:
+    name: Contracts
+    runs-on: ubuntu-latest
+    # Least privilege, the way check-vite-vars already does it: this job runs
+    # third-party Solidity through a compiler and needs nothing but the source.
+    permissions:
+      contents: read
+    # No `if:` and no `needs:`, exactly like the `test` job: the contract is the
+    # anchor of the whole system, so it is checked on every push and every PR,
+    # in parallel with the TypeScript suite.
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Pinned to the exact build the `anvil` service image ships and the one
+      # developers install on their machines. `foundry.toml` sets
+      # `bytecode_hash = "none"` and pins solc per path so a contract that
+      # anchors clinical records can be rebuilt byte for byte; a floating
+      # toolchain in CI would quietly give that up.
+      - name: Install Foundry 1.8.1
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.1
+
+      # `contracts/lib/` is gitignored, so a fresh checkout carries no
+      # dependencies and `forge build` fails without this step. `--no-git`
+      # keeps them out of the index: this repository tracks no submodules.
+      # All three are pinned to a tag. forge-std is not in foundry.lock — that
+      # file records only the other two — so leaving it unpinned would let an
+      # upstream default-branch change alter what this gate builds, with no diff
+      # here to review. v1.16.2 is the release currently vendored locally.
+      #
+      # These are three network clones on the critical path to deploy, so they
+      # retry with backoff: a GitHub hiccup should not block a release whose
+      # contracts are fine. `rm -rf lib` keeps a partial failure from poisoning
+      # the next attempt, and is safe because contracts/lib/ is gitignored.
+      - name: Install contract dependencies
+        working-directory: contracts
+        run: |
+          install_deps() {
+            rm -rf lib
+            forge install foundry-rs/forge-std@v1.16.2 --no-git &&
+            forge install ethereum-attestation-service/eas-contracts@v1.2.0 --no-git &&
+            forge install OpenZeppelin/openzeppelin-contracts@v4.9.3 --no-git
+          }
+          for attempt in 1 2 3; do
+            if install_deps; then exit 0; fi
+            echo "::warning::forge install failed (attempt ${attempt}/3)"
+            sleep $((attempt * 15))
+          done
+          echo "::error::forge install failed after 3 attempts"
+          exit 1
+
+      # FOUNDRY_PROFILE=ci is what finally gives the `[profile.ci]` block in
+      # foundry.toml a consumer: verbosity 3 and 1024 fuzz runs instead of 256.
+      - name: Build contracts
+        working-directory: contracts
+        run: forge build
+        env:
+          FOUNDRY_PROFILE: ci
+
+      # Includes `test_dispense_twice_reverts`, the test docs/18 describes as
+      # the one that sustains the pitch: "Si esa prueba falla, no hay proyecto".
+      - name: Run Foundry tests
+        working-directory: contracts
+        run: forge test
+        env:
+          FOUNDRY_PROFILE: ci
 
   check-vite-vars:
     name: Check VITE_* Repository Variables
@@ -123,7 +193,7 @@ jobs:
   build-api:
     name: Build & Push API Image
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [test, contracts]
     # Only build/push images on push to main — PRs stop at the test job above.
     if: github.event_name == 'push'
     permissions:
@@ -185,8 +255,8 @@ jobs:
     name: Build & Push Doctor Image
     runs-on: ubuntu-latest
     # check-vite-vars gates only the two image builds that bake VITE_* values
-    # in; build-api reads none of them and is left on `needs: [test]`.
-    needs: [test, check-vite-vars]
+    # in; build-api reads none of them, so it waits on test and contracts only.
+    needs: [test, contracts, check-vite-vars]
     if: github.event_name == 'push'
     permissions:
       contents: read
@@ -242,7 +312,7 @@ jobs:
   build-pharmacy:
     name: Build & Push Pharmacy Image
     runs-on: ubuntu-latest
-    needs: [test, check-vite-vars]
+    needs: [test, contracts, check-vite-vars]
     if: github.event_name == 'push'
     permissions:
       contents: read
@@ -292,7 +362,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=recetas-pharmacy
 
   deploy:
-    name: Deploy to Droplet
+    name: Deploy to Server
     runs-on: ubuntu-latest
     needs: [build-api, build-doctor, build-pharmacy]
     # Deploy only on push to main, and only if all three image builds succeeded.
@@ -303,7 +373,7 @@ jobs:
       packages: read
 
     steps:
-      - name: Deploy to droplet
+      - name: Deploy to server
         uses: appleboy/ssh-action@v1
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -317,7 +387,7 @@ jobs:
 
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-            cd /opt/docker/apps/recetas
+            cd /home/deploy/apps/recetas
 
             # Deploy the immutable, per-commit build (sha-<gitsha>) instead of
             # the mutable :latest tag, so this deploy is reproducible and can be
@@ -330,7 +400,7 @@ jobs:
             # Pull latest compose files and config (images themselves come from GHCR)
             git pull origin main
 
-            # Pull pre-built images — the droplet never builds, it only pulls
+            # Pull pre-built images — the server never builds, it only pulls
             docker compose -f docker-compose.prod.yml pull api doctor pharmacy
 
             # Run the drizzle migration BEFORE recreating the api, in a one-off

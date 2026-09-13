@@ -9,6 +9,21 @@ import type { Address, Bytes32, Hex } from '@recetas/shared';
  * below are protocol identifiers in code, never screen copy.
  */
 
+/**
+ * Corte 2 (docs/21-acceso-para-la-demo.md): the shape of the EIP-1193
+ * provider itself. It belongs to the port, not to the adapter that
+ * implements it, because `infrastructure/chain` needs the name of this type
+ * without importing anything from `infrastructure/signer` — that import is
+ * exactly the dependency this corte removes. It stays a plain JSON-RPC
+ * request shape, never a viem type, so the port keeps expressing intent
+ * ("give me the provider") instead of leaking a library detail.
+ */
+export interface Eip1193Provider {
+  request(args: { method: string; params?: unknown[] | object }): Promise<unknown>;
+  on?(event: string, listener: (...args: unknown[]) => void): void;
+  removeListener?(event: string, listener: (...args: unknown[]) => void): void;
+}
+
 /** Identity and network of the account that will register the dispensation. */
 export interface SignerPort {
   /** False when the browser exposes no injected provider at all. */
@@ -24,6 +39,14 @@ export interface SignerPort {
 
   /** Asks the provider to move to `chainId`; resolves once it is there. */
   ensureChain(chainId: number): Promise<void>;
+
+  /**
+   * The raw provider, for the one thing that still needs it directly: the
+   * chain adapter's write call, which builds its own `walletClient` (Corte 2
+   * of docs/21-acceso-para-la-demo.md). `undefined` when none is available,
+   * exactly like `isAvailable()`/`getAccount()` above.
+   */
+  getProvider(): Eip1193Provider | undefined;
 }
 
 /**

@@ -29,3 +29,6 @@ coverage/
 # Editors and OS
 .DS_Store
 Thumbs.db
+
+# Office lock files, left beside the document while it is open
+~$*

@@ -1,4 +1,3 @@
-import type { Address } from '@recetas/shared';
 import { DEFAULT_REJECTION_FORMATTERS } from '../domain/rejection';
 
 /**
@@ -35,19 +34,7 @@ export function formatIsoDay(iso: string): string {
   return formatDay(BigInt(Math.floor(millis / 1000)));
 }
 
-/** ISO 8601 from the decrypted document to a Bolivian day and time. */
-export function formatIsoDateTime(iso: string): string {
-  const millis = Date.parse(iso);
-  if (Number.isNaN(millis)) return iso;
-  return formatDateTime(BigInt(Math.floor(millis / 1000)));
-}
-
 /** Block numbers read as counters, not as amounts, so they get thousands marks. */
 export function formatBlockNumber(value: bigint): string {
   return new Intl.NumberFormat('es-BO').format(value);
-}
-
-/** Narrowing helper for the `0x…` strings the ports hand back. */
-export function asAddress(value: string): Address {
-  return value as Address;
 }

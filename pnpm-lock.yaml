@@ -63,6 +63,9 @@ importers:
       '@recetas/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@simplewebauthn/browser':
+        specifier: 14.0.0
+        version: 14.0.0
       qrcode:
         specifier: 1.5.4
         version: 1.5.4
@@ -255,6 +258,9 @@ importers:
       '@fastify/cors':
         specifier: 9.0.1
         version: 9.0.1
+      '@recetas/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
       '@recetas/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
@@ -276,6 +282,9 @@ importers:
       pg:
         specifier: 8.13.1
         version: 8.13.1
+      viem:
+        specifier: 2.21.54
+        version: 2.21.54(typescript@5.6.3)(zod@3.25.76)
       zod:
         specifier: 3.25.76
         version: 3.25.76
@@ -1342,6 +1351,9 @@ packages:
 
   '@scure/bip39@1.5.0':
     resolution: {integrity: sha512-Dop+ASYhnrwm9+HA/HwXg7j2ZqM6yk2fyLWb5znexjctFY3+E+eU8cIWI0Pql0Qx4hPZCijlGq4OL71g+Uz30A==}
+
+  '@simplewebauthn/browser@14.0.0':
+    resolution: {integrity: sha512-1odWVqeEBTl7lJ9zMKLEsmTlnyrDO5iRcTvfMKKk1WThUnp/i8JJdffdj2icP+tty159s4PgwE3BiMoEW9NFow==}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -3411,6 +3423,8 @@ snapshots:
     dependencies:
       '@noble/hashes': 1.6.1
       '@scure/base': 1.2.6
+
+  '@simplewebauthn/browser@14.0.0': {}
 
   '@testing-library/dom@10.4.1':
     dependencies:

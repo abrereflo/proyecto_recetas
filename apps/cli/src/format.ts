@@ -39,10 +39,6 @@ export function formatDateTime(seconds: bigint | number): string {
   return `${dateFormatter.format(date)} a las ${timeFormatter.format(date)}`;
 }
 
-export function formatIsoDay(isoTimestamp: string): string {
-  return dateFormatter.format(new Date(isoTimestamp));
-}
-
 /** `0x7099…79C8`: enough to recognise an account without a wall of hex. */
 export function shortAddress(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;

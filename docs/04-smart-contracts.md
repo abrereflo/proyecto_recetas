@@ -293,7 +293,7 @@ Se elige el registro en emisión por legibilidad de la demo. La variante diferid
 | `test_issue_by_non_practitioner_reverts` | Cuenta sin credencial de médico |
 | `test_cancel_only_by_prescriber` | Otro médico no puede anular |
 | `test_cancel_after_dispense_reverts` | No se anula lo ya entregado |
-| `testFuzz_never_leaves_dispensed` | Invariante: ninguna secuencia de llamadas saca una receta de `Dispensed` |
+| `testFuzz_never_leaves_dispensed` | Fuzz acotado, 256 pasadas: con un llamante y un salto temporal cualesquiera, `dispense` seguido de `cancel` no saca la receta de `Dispensed`. **No es un `invariant_` de Foundry**, no fuzzea la secuencia y el salto (`uint16`, 18,2 h) no alcanza la caducidad de 30 días |
 
 ## Siguiente paso
 

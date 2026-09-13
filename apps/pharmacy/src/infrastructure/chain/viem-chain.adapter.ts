@@ -27,9 +27,9 @@ import {
 import type {
   PrescriberSignatureInput,
   PrescriberSignatureVerifier,
+  SignerPort,
 } from '../../ports/signer.port';
 import type { PharmacyConfig } from '../config/env';
-import { injectedProvider, type Eip1193Provider } from '../signer/eip1193-signer.adapter';
 
 /**
  * `ChainPort` over viem.
@@ -47,14 +47,19 @@ import { injectedProvider, type Eip1193Provider } from '../signer/eip1193-signer
 export interface ViemChainAdapterOptions {
   config: PharmacyConfig;
   publicClient?: PublicClient;
-  /** Resolved lazily so a provider injected after load is still picked up. */
-  getProvider?: () => Eip1193Provider | undefined;
+  /**
+   * The write path's only source of a provider (Corte 2,
+   * docs/21-acceso-para-la-demo.md). This adapter never reaches for
+   * `window.ethereum` on its own: it asks the port, so a different signer —
+   * the ERC-4337/passkey one of D-04 — is a change to the composition root,
+   * not to this file.
+   */
+  signer: Pick<SignerPort, 'getProvider'>;
 }
 
 export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainPort {
-  const { config } = options;
+  const { config, signer } = options;
   const publicClient = options.publicClient ?? buildPublicClient(config);
-  const getProvider = options.getProvider ?? injectedProvider;
 
   const registry = {
     address: config.registryAddress as ViemAddress,
@@ -131,7 +136,7 @@ export function createViemChainAdapter(options: ViemChainAdapterOptions): ChainP
     },
 
     async dispense(contentHash: Bytes32, pharmacy: Address): Promise<DispenseReceipt> {
-      const provider = getProvider();
+      const provider = signer.getProvider();
       if (provider === undefined) {
         throw new Error('Este dispositivo no tiene configurada una cuenta de farmacia.');
       }

@@ -33,9 +33,9 @@ export interface DoctorServices {
 }
 
 export function createDoctorServices(config: DoctorConfig): DoctorServices {
-  const chain = createViemChainAdapter({ config });
-  const documents = createHttpDocumentAdapter({ config });
   const signer = createEip1193Signer({ config });
+  const chain = createViemChainAdapter({ config, signer });
+  const documents = createHttpDocumentAdapter({ config });
 
   return {
     config,

@@ -21,11 +21,22 @@ WORKDIR /app
 
 # Manifests first so this layer is cached independently of source edits (same
 # ordering as the dev image, services/api/Dockerfile). The api depends on all
-# three workspace packages (services/api/package.json).
+# four workspace packages (services/api/package.json).
+#
+# EVERY workspace package the api pulls in needs its manifest HERE, not just
+# its source. pnpm reads these to discover the workspace and resolve each
+# package's own dependencies into its own node_modules; a package whose
+# manifest is missing is not a workspace member at install time, so the later
+# `COPY packages ./packages` drops its source in with nothing resolved behind
+# it. That failure is invisible at build time and only surfaces at container
+# start, as ERR_MODULE_NOT_FOUND for one of that package's dependencies —
+# which is exactly how @recetas/chain's viem went missing when the relayer
+# made the api depend on a fourth package and this list stayed at three.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/crypto/package.json ./packages/crypto/
 COPY packages/rules/package.json ./packages/rules/
+COPY packages/chain/package.json ./packages/chain/
 COPY services/api/package.json ./services/api/
 
 # --frozen-lockfile: a production build must fail, not silently rewrite

@@ -33,3 +33,5 @@ export * from './registry-errors';
 export * from './viem-chain';
 export * from './envelope-payload';
 export * from './eip712';
+export * from './entry-point-abi';
+export * from './user-operation';

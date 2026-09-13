@@ -16,13 +16,12 @@ const colorEnabled =
   process.env['TERM'] !== 'dumb' &&
   process.stdout.isTTY === true;
 
-type Style = 'red' | 'green' | 'yellow' | 'cyan' | 'grey' | 'bold' | 'reset';
+type Style = 'red' | 'green' | 'yellow' | 'grey' | 'bold' | 'reset';
 
 const CODES: Record<Style, string> = {
   red: '\u001b[31m',
   green: '\u001b[32m',
   yellow: '\u001b[33m',
-  cyan: '\u001b[36m',
   grey: '\u001b[90m',
   bold: '\u001b[1m',
   reset: '\u001b[0m',
@@ -38,7 +37,6 @@ export const boldRed = (value: string): string => paint(value, 'bold', 'red');
 export const green = (value: string): string => paint(value, 'green');
 export const boldGreen = (value: string): string => paint(value, 'bold', 'green');
 export const yellow = (value: string): string => paint(value, 'yellow');
-export const cyan = (value: string): string => paint(value, 'cyan');
 export const grey = (value: string): string => paint(value, 'grey');
 export const bold = (value: string): string => paint(value, 'bold');
 
