@@ -33,12 +33,13 @@ Un médico firma una receta sin saber qué es una wallet y sin pagar gas; la far
 | [19-despliegue.md](19-despliegue.md) | Topología de despliegue, pipeline de CI/CD, restricción de capacidad del droplet y procedimiento de rollback | Equipo, infraestructura |
 | [20-wallet-y-red-de-pruebas.md](20-wallet-y-red-de-pruebas.md) | Cómo se instala la extensión, se agrega la red a mano, se consiguen AVAX de prueba y se acredita la cuenta | Equipo, uso diario |
 | [21-acceso-para-la-demo.md](21-acceso-para-la-demo.md) | Cómo entra un profesional ajeno al equipo en la demo y el primer piloto: los cuatro cortes que quitan prerrequisitos y lo que sigue en pie | Equipo, ingeniería |
+| [22-preflight-del-primer-despliegue.md](22-preflight-del-primer-despliegue.md) | Qué se comprobó del entorno antes del primer despliegue, qué falta y en qué orden | Equipo, infraestructura |
 
 ## Rutas de lectura
 
 | Perfil | Recorrido |
 |---|---|
-| Quien construye | [11 Glosario](11-glosario.md) → [01 Arquitectura](01-arquitectura.md) → [04 Contratos](04-smart-contracts.md) → [08 Stack](08-stack-y-entorno.md) → [09 Roadmap](09-roadmap.md) → [16 Plan de ejecución](16-plan-de-ejecucion.md) → [17 Diseño](17-diseno-y-experiencia.md) → [18 Tareas por fases](18-tareas-por-fases.md) → [19 Despliegue](19-despliegue.md) → [20 Wallet y red de pruebas](20-wallet-y-red-de-pruebas.md) → [21 Acceso para la demo](21-acceso-para-la-demo.md) |
+| Quien construye | [11 Glosario](11-glosario.md) → [01 Arquitectura](01-arquitectura.md) → [04 Contratos](04-smart-contracts.md) → [08 Stack](08-stack-y-entorno.md) → [09 Roadmap](09-roadmap.md) → [16 Plan de ejecución](16-plan-de-ejecucion.md) → [17 Diseño](17-diseno-y-experiencia.md) → [18 Tareas por fases](18-tareas-por-fases.md) → [19 Despliegue](19-despliegue.md) → [20 Wallet y red de pruebas](20-wallet-y-red-de-pruebas.md) → [21 Acceso para la demo](21-acceso-para-la-demo.md) → [22 Preflight](22-preflight-del-primer-despliegue.md) |
 | Quien presenta | [15 Track y entrega](15-track-y-entrega.md) → [16 Plan de ejecución](16-plan-de-ejecucion.md) → [00 Visión](00-vision-y-alcance.md) → [13 Pitch](13-pitch-y-sostenibilidad.md) → [12 Preguntas de jurado](12-preguntas-de-jurado.md) → [10 Estado del arte](10-estado-del-arte.md) |
 | Perfil clínico | [00 Visión](00-vision-y-alcance.md) → [02 Roles](02-roles-y-permisos.md) → [06 Validación clínica](06-validacion-clinica.md) |
 | Perfil legal | [07 Seguridad y cumplimiento](07-seguridad-y-cumplimiento.md) → [05 Almacenamiento y cifrado](05-almacenamiento-y-cifrado.md) → [03 Modelo de datos](03-modelo-de-datos.md) |
