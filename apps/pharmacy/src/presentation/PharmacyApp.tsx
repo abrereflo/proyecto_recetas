@@ -9,6 +9,7 @@ import {
 } from './flow/pharmacy-flow';
 import { AccessScreen } from './screens/AccessScreen';
 import { AlreadyDispensedScreen } from './screens/AlreadyDispensedScreen';
+import { DeviceKeyScreen } from './screens/DeviceKeyScreen';
 import { DispensedScreen } from './screens/DispensedScreen';
 import { DispensingScreen } from './screens/DispensingScreen';
 import { ManualEntryScreen } from './screens/ManualEntryScreen';
@@ -42,6 +43,12 @@ export interface PharmacyAppProps {
 export function PharmacyApp({ services, startScanner }: PharmacyAppProps) {
   const [state, dispatch] = useReducer(pharmacyFlowReducer, INITIAL_FLOW_STATE);
   const [account, setAccount] = useState<Address | null>(null);
+  // docs/23: on the device-key path the key has to be opened before P1 can ask
+  // the chain anything. `true` on the injected-provider path, where there is no
+  // key to open, so that path renders exactly what it rendered before.
+  const [deviceKeyOpen, setDeviceKeyOpen] = useState(
+    () => services.deviceKey === undefined || services.deviceKey.isUnlocked(),
+  );
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -132,7 +139,20 @@ export function PharmacyApp({ services, startScanner }: PharmacyAppProps) {
     dispatch({ type: 'qrCaptured', qr });
   }, []);
 
-  return renderScreen(state, { services, startScanner, dispatch, onAccredited, onCapture });
+  // The account is deliberately NOT taken from here: P1 re-reads it from the
+  // port and runs its own credential check, so the device-key path and the
+  // injected-provider path reach 'accredited' through exactly the same code.
+  const onDeviceKeyOpened = useCallback(() => setDeviceKeyOpen(true), []);
+
+  return renderScreen(state, {
+    services,
+    startScanner,
+    dispatch,
+    onAccredited,
+    onCapture,
+    deviceKeyOpen,
+    onDeviceKeyOpened,
+  });
 }
 
 interface ScreenDeps {
@@ -141,6 +161,9 @@ interface ScreenDeps {
   dispatch: React.Dispatch<Parameters<typeof pharmacyFlowReducer>[1]>;
   onAccredited(account: Address): void;
   onCapture(qr: Parameters<PharmacyServices['verify']>[0]['qr']): void;
+  /** docs/23. Always true when there is no device key to open. */
+  deviceKeyOpen: boolean;
+  onDeviceKeyOpened(): void;
 }
 
 function renderScreen(state: FlowState, deps: ScreenDeps) {
@@ -148,6 +171,15 @@ function renderScreen(state: FlowState, deps: ScreenDeps) {
 
   switch (state.status) {
     case 'access':
+      // P0 before P1, and only on the device-key path (docs/23). The flow
+      // machine knows nothing about it: unlocking is not a navigation step, it
+      // is a precondition of the one screen that needs an account.
+      if (services.deviceKey !== undefined && !deps.deviceKeyOpen) {
+        return (
+          <DeviceKeyScreen deviceKey={services.deviceKey} onUnlocked={deps.onDeviceKeyOpened} />
+        );
+      }
+
       return (
         <AccessScreen
           chainId={services.config.chainId}

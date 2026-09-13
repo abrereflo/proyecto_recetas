@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { encodeQrPayload, type Address } from '@recetas/shared';
 import { CHECK_ORDER } from '../domain/verification';
 import type { DispenseReceipt } from '../ports/chain.port';
+import type { DeviceKeyPort } from '../ports/device-key.port';
 import type { SignerPort } from '../ports/signer.port';
 import {
   CHAIN_ID,
@@ -257,5 +258,62 @@ describe('hard rules of docs/03 across the flow', () => {
 
     expect(document.body.textContent).not.toContain(aDocument().patient.patientId);
     expect(document.body.textContent).not.toContain(SALT);
+  });
+});
+
+describe('a device that signs with its own key (docs/23)', () => {
+  function lockedDeviceKey(): DeviceKeyPort {
+    let unlocked = false;
+
+    return {
+      hasKey: () => true,
+      isUnlocked: () => unlocked,
+      enrol: async () => PHARMACY_A,
+      unlock: async () => {
+        unlocked = true;
+        return PHARMACY_A;
+      },
+      lock: () => {
+        unlocked = false;
+      },
+      forget: () => undefined,
+    };
+  }
+
+  it('asks for the passphrase before the access screen, and opens no camera', () => {
+    render(<PharmacyApp services={buildServices({ deviceKey: lockedDeviceKey() })} />);
+
+    expect(screen.getByLabelText(/contraseña de este dispositivo/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /escanear receta/i })).not.toBeInTheDocument();
+  });
+
+  it('runs exactly the usual credential check once the key is open', async () => {
+    const user = userEvent.setup();
+    render(<PharmacyApp services={buildServices({ deviceKey: lockedDeviceKey() })} />);
+
+    await user.type(screen.getByLabelText(/contraseña de este dispositivo/i), 'farmacia-2026-ok');
+    await user.click(screen.getByRole('button', { name: /^desbloquear$/i }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /escanear receta/i })).toBeEnabled(),
+    );
+  });
+
+  it('goes straight to the access screen when the key is already open', async () => {
+    const deviceKey: DeviceKeyPort = { ...lockedDeviceKey(), isUnlocked: () => true };
+    render(<PharmacyApp services={buildServices({ deviceKey })} />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /escanear receta/i })).toBeEnabled(),
+    );
+  });
+
+  it('leaves the injected-provider path exactly as it was when there is no device key', async () => {
+    render(<PharmacyApp services={buildServices()} />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /escanear receta/i })).toBeEnabled(),
+    );
+    expect(screen.queryByLabelText(/contraseña de este dispositivo/i)).not.toBeInTheDocument();
   });
 });
