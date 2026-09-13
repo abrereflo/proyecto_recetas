@@ -34,18 +34,18 @@ Prerequisito de todo lo demás. **No es progreso hacia la demo**: que Docker lev
 Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 
 - [x] `contracts/` inicializado con Foundry
-- [x] `PrescriptionRegistry.sol` con `enum PrescriptionStatus { None, Issued, Dispensed, Cancelled }`
-- [x] Struct EIP-712 `Prescription` y dominio `RecetaVerificable` v1, chainId 43113
+- [x] `enum PrescriptionStatus { None, Issued, Dispensed, Cancelled }` — declarado en `IPrescriptionRegistry.sol`, que `PrescriptionRegistry.sol` importa
+- [x] Struct EIP-712 `Prescription` y dominio `RecetaVerificable` v1 — **no hay una sola línea de EIP-712 en `contracts/`**: vive en `packages/shared/src/eip712.ts`, porque la firma es off-chain ([01](01-arquitectura.md)) y la verificación on-chain se descartó a propósito ([04](04-smart-contracts.md)). El 43113 es el valor por defecto de `prescriptionDomain`, que `domainFor` sobrescribe siempre con la chainId del despliegue vivo, hoy 31337
 - [x] `issue(contentHash, patientCommitment, expiresAt)`
 - [x] `dispense(contentHash)`
 - [x] `cancel(contentHash)` restringido al prescriptor y solo antes de dispensar
 - [x] `verify(contentHash)` devolviendo `(status, dispensable, prescriber, expiresAt)`
-- [x] Los nueve errores personalizados de [04](04-smart-contracts.md), con `AlreadyDispensed` devolviendo `dispensedBy` y `dispensedAt`
+- [x] Los nueve errores de ciclo de vida de [04](04-smart-contracts.md), con `AlreadyDispensed` devolviendo `dispensedBy` y `dispensedAt`. El contrato declara **dieciséis**: esos nueve más los siete de credencial que [04](04-smart-contracts.md) también exige
 - [x] Eventos `PrescriptionIssued` y `PrescriptionDispensed`
 - [x] **`test_dispense_twice_reverts` pasando**
 - [x] Test de caducidad con `vm.warp`
 - [x] Test de cancelación por quien no es el prescriptor
-- [x] Invariante con fuzzing: ninguna secuencia de llamadas saca una receta de `Dispensed`
+- [x] Fuzz acotado sobre el estado absorbente: `testFuzz_never_leaves_dispensed`, 256 pasadas. **No es un invariant test de Foundry** — no existe ninguna función `invariant_` ni `StdInvariant` en `contracts/test/` — y no prueba «ninguna secuencia»: fuzzea el llamante y el salto temporal sobre una secuencia fija `dispense` → `cancel`, nunca llama a `issue`, y el `uint16 elapsed` topea el salto en 18,2 horas contra una caducidad de 30 días, así que jamás alcanza la rama de caducada
 
 **Criterio de salida:** `forge test` en verde, con `test_dispense_twice_reverts` incluida. Si esa prueba falla, no hay proyecto.
 
@@ -58,7 +58,9 @@ Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 
 **Criterio de salida:** dirección pública y explorable. Desbloquea todo lo que necesita hablar contra un contrato real.
 
-> El guion de despliegue ya no es un salto al vacío: se ejecutó contra un nodo real (Anvil, chainId 31337) y el ciclo completo de la demo funcionó sobre el contrato desplegado. Lo que falta para Fuji es exclusivamente credenciales y fondos, no código.
+> **El orden de esta lista ya no se sostiene: la Fase 2 no puede ir antes que la 3.** `script/Deploy.s.sol` revierte fuera de la chain 31337 si falta `EAS_ADDRESS`, cualquiera de los dos uids de esquema o `ISSUER_AUTHORITY` (`MissingEasAddress`, `MissingPractitionerSchema`, `MissingPharmacySchema`, `MissingIssuerAuthority`, líneas 57-60), y esos cuatro valores los producen `DeployEAS.s.sol` y `RegisterSchemas.s.sol`, que esta lista archiva en la Fase 3. Antes de la migración no era así: EAS venía dado por la red y la Fase 2 era autónoma. La secuencia real en Fuji es cuenta financiada → `DeployEAS` → `RegisterSchemas` → `Deploy`.
+
+> El guion de despliegue ya no es un salto al vacío: se ejecutó contra un nodo real (Anvil, chainId 31337) y el ciclo completo de la demo funcionó sobre el contrato desplegado. Lo que falta para Fuji no es solo fondos: hace falta una cuenta de despliegue financiada, una `ISSUER_AUTHORITY` cuya clave se controle, y el EAS propio desplegado **antes** — ver la nota de orden aquí abajo.
 
 > **La verificación del código fuente está sin comprobar.** Fuji es de tier pago en Etherscan V2, así que la key gratuita de Etherscan no sirve y `[etherscan]` apunta a Routescan (`https://api.routescan.io/v2/network/testnet/evm/43113/etherscan`, con la key literal `verifyContract`). Esa configuración **no se ha probado todavía contra un despliegue real**: hasta que `--verify` funcione una vez en Fuji, es un supuesto, no un hecho. El explorador de referencia es `https://testnet.snowtrace.io`.
 

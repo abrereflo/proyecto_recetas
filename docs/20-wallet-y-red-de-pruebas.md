@@ -1,6 +1,6 @@
 # 20 — Wallet y red de pruebas
 
-Las dos aplicaciones web firman hoy con una extensión de navegador, y esa extensión no configura sola la cadena: el código llama a `wallet_switchEthereumChain` y nunca a `wallet_addEthereumChain`, así que **la red se agrega a mano, siempre, antes de abrir la aplicación**. Este documento es el procedimiento operativo completo de ese paso y de los tres que lo acompañan: instalar la extensión, importar o crear una cuenta, conseguir AVAX de prueba en Fuji y acreditar esa cuenta contra EAS. Ninguno es opcional, y saltarse cualquiera produce un error que parece un fallo del sistema y no lo es. Lo que aquí se describe es andamiaje de desarrollo y demo, no la experiencia que [00](00-vision-y-alcance.md) promete al médico del piloto.
+Las dos aplicaciones web firman hoy con una extensión de navegador, y desde el «Corte 1» de [21](21-acceso-para-la-demo.md) esa extensión **ya no hay que configurarla a mano**: el código pide `wallet_switchEthereumChain` y, si la extensión responde `4902` porque no conoce la cadena, ofrece `wallet_addEthereumChain` con los parámetros que deriva de la configuración y reintenta el cambio una vez. Agregar la red a mano sigue siendo el camino de respaldo para quien rechace ese diálogo, y es lo que documenta la sección correspondiente. Este documento es el procedimiento operativo completo de ese paso y de los tres que lo acompañan: instalar la extensión, importar o crear una cuenta, conseguir AVAX de prueba en Fuji y acreditar esa cuenta contra EAS. Ninguno es opcional, y saltarse cualquiera produce un error que parece un fallo del sistema y no lo es. Lo que aquí se describe es andamiaje de desarrollo y demo, no la experiencia que [00](00-vision-y-alcance.md) promete al médico del piloto.
 /
 > **Estado al 12/09/2026.** Procedimiento escrito contra el código de hoy y verificado en él; la parte de Fuji —faucets, saldos, despliegue— no se ha ejercitado todavía de extremo a extremo. Las URL de faucet son las vigentes a esta fecha y cambian sin aviso: cada una lleva su marca `VERIFICAR:`. La ruta local sobre Anvil sí está completa y es la que conviene recorrer primero.
 
@@ -20,7 +20,7 @@ El mismo `TODO` está en `apps/pharmacy/src/infrastructure/signer/eip1193-signer
 |---|---|---|
 | Custodia de la clave | Smart account ERC-4337 + passkey del dispositivo | Extensión de navegador con clave local |
 | Quién paga el gas | Paymaster | La propia cuenta, con AVAX de testnet |
-| Alta del profesional | Passkey y attestation, sin instalar nada | Instalar extensión, agregar red a mano, financiar cuenta |
+| Alta del profesional | Passkey y attestation, sin instalar nada | Instalar extensión, aceptar el diálogo que agrega la red, financiar cuenta |
 | Cuándo llega | Fase 5 | — |
 
 > **La interfaz nunca dice «wallet».** La regla **D1** de [17](17-diseno-y-experiencia.md) está codificada: `apps/*/src/**/copy-guard.test.ts` falla si alguna cadena de la interfaz contiene `wallet`, `frase semilla` o `saldo`. El único literal de protocolo permitido es `wallet_switchEthereumChain`, porque es el nombre de un método, no texto para el usuario. La interfaz dice «credencial profesional», «este equipo» (médico), «este dispositivo» (farmacia) y «Cadena».
@@ -47,7 +47,7 @@ Cuatro prerrequisitos. Los cuatro, y en este orden.
 | # | Prerrequisito | Por qué | Si falta |
 |---|---|---|---|
 | 1 | Extensión EIP-1193 instalada en el navegador | La aplicación busca `globalThis.window.ethereum` | La aplicación informa que no hay firmante disponible |
-| 2 | Red agregada a mano en la extensión | El código no llama a `wallet_addEthereumChain` | Error de cadena no configurada (código 4902) |
+| 2 | Red conocida por la extensión | Si no la conoce, el código la ofrece con `wallet_addEthereumChain` tras el `4902` | Solo falla si se rechaza ese diálogo: cadena no configurada |
 | 3 | Cuenta con fondos en esa red | Toda escritura paga gas | La transacción falla al estimar el gas |
 | 4 | Cuenta con attestation EAS de credencial profesional | Lo exige el contrato y lo comprueba la pantalla de acceso | El botón principal queda deshabilitado |
 
@@ -69,7 +69,7 @@ Pasos, una sola vez por equipo:
 
 ## Agregar la red a mano
 
-Este es el paso que más tiempo hace perder, y es obligatorio por una razón concreta del código: el adaptador llama únicamente a `wallet_switchEthereumChain`. Si la cadena no está registrada en la extensión, el proveedor devuelve el código **4902** (`UNRECOGNISED_CHAIN`) y la aplicación lanza este mensaje:
+Este paso **ya no es obligatorio**, pero conviene saber hacerlo porque es el respaldo cuando algo sale mal. El adaptador pide `wallet_switchEthereumChain`; si la cadena no está registrada, el proveedor devuelve el código **4902** (`UNRECOGNISED_CHAIN`) y el código responde ofreciendo `wallet_addEthereumChain`. Solo si ese diálogo se rechaza, o si la propia alta falla, la aplicación lanza este mensaje:
 
 ```
 El dispositivo no tiene configurada la cadena ${chainId}, que es donde está
@@ -78,7 +78,7 @@ registrado el sistema de recetas.
 
 (doctor: `eip1193-signer.adapter.ts:131-136`; farmacia: `:110-116`.)
 
-> **La aplicación nunca agrega la red por ti, y es deliberado.** Agregar una cadena es una operación que reescribe la configuración del navegador del usuario; el sistema pide cambiar a una cadena que ya debe existir y, si no existe, lo dice en vez de inventarla. `wallet_addEthereumChain` no se usa en ninguna parte del repositorio.
+> **La aplicación sí ofrece agregar la red, pero nunca la agrega a tus espaldas.** Agregar una cadena reescribe la configuración del navegador, así que la decisión queda siempre en el diálogo que muestra la extensión: el código propone los parámetros y el usuario acepta o rechaza. Si rechaza, se le dice que la cadena no está configurada en vez de insistir. El código vive en `apps/doctor/src/infrastructure/signer/eip1193-signer.adapter.ts` (`addChainThenRetrySwitch`) y en su gemelo de farmacia; los parámetros salen de `packages/chain/src/viem-chain.ts` (`addEthereumChainParams`, EIP-3085).
 
 ### Anvil local (31337)
 
@@ -219,7 +219,7 @@ Con eso en marcha, la lista de comprobación en el navegador:
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| «El dispositivo no tiene configurada la cadena N…» | Código 4902: la cadena no está registrada en la extensión y el código no llama a `wallet_addEthereumChain` | Agregar la red a mano con los parámetros exactos de la sección correspondiente |
+| «El dispositivo no tiene configurada la cadena N…» | Código 4902 y además el alta automática no prosperó: o se rechazó el diálogo de `wallet_addEthereumChain`, o la extensión lo negó | Reintentar aceptando el diálogo, o agregar la red a mano con los parámetros exactos de la sección correspondiente |
 | La operación se cancela sin mensaje de error del sistema | Código 4001: el usuario rechazó la firma o el cambio de cadena en la extensión | Repetir la operación y aceptar en la ventana de la extensión |
 | El botón «Escribir una receta» está deshabilitado | La cuenta conectada no tiene attestation EAS de credencial profesional | Acreditarla con `SetupCredentials.s.sol` o `setup-credentials`; en Fuji, pedírselo a la autoridad de credenciales |
 | La aplicación insiste en cambiar de cadena y nunca queda conforme | `VITE_CHAIN_ID` de la construcción no coincide con la red que se agregó en la extensión | Alinear ambos valores: 31337 en desarrollo, 43113 en Fuji |
