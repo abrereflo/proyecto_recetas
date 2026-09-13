@@ -6,12 +6,21 @@ import {
   partitionAlerts,
   type PresentedAlert,
 } from '../../domain/alerts';
+import { CONTROLLED_MEDICATIONS } from '../../domain/controlled-medications';
 import { validateDraft, type DraftIssue, type PrescriptionDraft } from '../../domain/draft';
 import { AlertCard } from '../components/AlertCard';
 import { Field } from '../components/Field';
 import { FlowSteps } from '../components/FlowSteps';
 import { ScreenShell } from '../components/ScreenShell';
-import { addItem, alertsFor, removeItem, replaceItem } from '../draft-editing';
+import {
+  addItem,
+  alertsFor,
+  hasDoctorEnteredWork,
+  isCatalogueItemSelected,
+  removeItem,
+  replaceItem,
+  toggleCatalogueItem,
+} from '../draft-editing';
 
 /**
  * D3 — Medicación.
@@ -19,7 +28,10 @@ import { addItem, alertsFor, removeItem, replaceItem } from '../draft-editing';
  * HARD RULE (D-07, docs/17 D3): there is no commercial product catalogue. The
  * MVP prescribes by ACTIVE INGREDIENT and ATC code, and the equivalence is left
  * to the pharmacist's judgement. A brand field here would promise a catalogue
- * that does not exist and an equivalence nobody has validated.
+ * that does not exist and an equivalence nobody has validated. The checkbox
+ * list of controlled medications is not that catalogue: it names active
+ * ingredients with their ATC codes (domain/controlled-medications.ts) and only
+ * saves typing the identity of a line; quantity and dosage stay on the card.
  *
  * HARD RULE (docs/06, docs/17): "Ninguna alerta clínica bloquea la emisión."
  * `NEVER_BLOCKS_ES` is rendered beside the alerts, and the control that moves
@@ -102,13 +114,65 @@ export function MedicationScreen({
           </p>
         </div>
 
+        <section className="card">
+          <fieldset className="choice-list">
+            <legend className="title-section">Medicamentos controlados</legend>
+            <p className="text-secondary">
+              Marque uno o varios. Cada medicamento marcado se añade como ítem; complete cantidad y
+              posología más abajo.
+            </p>
+
+            {CONTROLLED_MEDICATIONS.map((medication) => {
+              const id = `controlled-${medication.id}`;
+              const noteId = `${id}-note`;
+              // The box is checked but clicking it will not clear it: the
+              // doctor has written on that line and `toggleCatalogueItem`
+              // refuses to delete their work. Saying so beside the control,
+              // tied to it by `aria-describedby`, is what keeps that refusal
+              // from reading as a broken checkbox — and the sentence carries
+              // the meaning on its own, without relying on colour.
+              const selected = isCatalogueItemSelected(draft, medication);
+              const locked = selected && hasDoctorEnteredWork(draft, medication);
+
+              return (
+                <div key={medication.id}>
+                  <div className="choice">
+                    <input
+                      checked={selected}
+                      id={id}
+                      onChange={() => onDraftChange(toggleCatalogueItem(draft, medication))}
+                      type="checkbox"
+                      {...(locked ? { 'aria-describedby': noteId } : {})}
+                    />
+                    <label htmlFor={id}>
+                      {medication.activeIngredient} {medication.strength}, {medication.doseForm}{' '}
+                      <span className="mono">{medication.atcCode}</span>
+                    </label>
+                  </div>
+                  {locked && (
+                    <p className="field__hint" id={noteId}>
+                      Este medicamento ya tiene cantidad y posología suyas. Para retirarlo, use el
+                      botón «Quitar ítem» de su ficha.
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </fieldset>
+        </section>
+
         {draft.items.map((item, index) => (
           <section className="card" key={index}>
             <header className="card__header">
               <h2 className="title-section">Ítem {index + 1}</h2>
+              {/* Never disabled, not even on the last item. The checkbox hint
+                  above sends the doctor here when unchecking refuses to delete
+                  their work, and with a single line that is exactly the state a
+                  disabled button would leave without an exit. The "the list is
+                  never empty" invariant lives in `removeItem`, which clears the
+                  last line back to a blank one instead of emptying the list. */}
               <button
                 className="btn btn--ghost"
-                disabled={draft.items.length === 1}
                 onClick={() => onDraftChange(removeItem(draft, index))}
                 type="button"
               >

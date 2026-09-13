@@ -2,11 +2,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { NEVER_BLOCKS_ES, RULESET_VERSION } from '@recetas/rules';
+import { ALERT_COPY_ES, NEVER_BLOCKS_ES, RULESET_VERSION } from '@recetas/rules';
 import { ALERT_DISMISSAL_COPY_ES, dismissAlert } from '../../domain/alerts';
+import { CONTROLLED_MEDICATIONS } from '../../domain/controlled-medications';
 import type { PrescriptionDraft } from '../../domain/draft';
 import { aDraft, anItem } from '../../test/fixtures';
-import { alertsFor, editDraft } from '../draft-editing';
+import { alertsFor, editDraft, emptyItem } from '../draft-editing';
 import { MedicationScreen } from './MedicationScreen';
 
 /** D3 — Medicación (docs/17). */
@@ -190,6 +191,296 @@ describe('the form refuses to advance on incomplete items', () => {
     const control = screen.getByLabelText(/Principio activo/);
     expect(control).toHaveAttribute('aria-invalid', 'true');
     expect(control.getAttribute('aria-describedby')).toContain('item-0-ingredient-error');
+  });
+});
+
+describe('the controlled-medication catalogue', () => {
+  /** A draft with the single blank line D3 opens with. */
+  function blankDraft(): PrescriptionDraft {
+    return aDraft({ items: [emptyItem()] });
+  }
+
+  /** The "Principio activo" and "Código ATC" controls of every item card, in order. */
+  function itemValues(): { ingredient: string; atc: string }[] {
+    const ingredients = screen.getAllByLabelText(/Principio activo/);
+    return ingredients.map((control, index) => ({
+      ingredient: (control as HTMLInputElement).value,
+      atc: (screen.getByLabelText(/Código ATC/, { selector: `#item-${index}-atc` }) as HTMLInputElement)
+        .value,
+    }));
+  }
+
+  it('offers exactly ten medications, each as a checkbox with a real label', () => {
+    renderScreen(blankDraft());
+
+    const boxes = screen.getAllByRole('checkbox');
+    expect(boxes).toHaveLength(10);
+    expect(boxes).toHaveLength(CONTROLLED_MEDICATIONS.length);
+
+    for (const medication of CONTROLLED_MEDICATIONS) {
+      const box = screen.getByRole('checkbox', { name: new RegExp(medication.activeIngredient) });
+      expect(box).toHaveAccessibleName(new RegExp(medication.atcCode));
+      expect(box).toHaveAccessibleName(new RegExp(medication.strength));
+      expect(box).toHaveAccessibleName(new RegExp(medication.doseForm));
+    }
+  });
+
+  it('adds a prefilled item card when one is checked', async () => {
+    const { user } = renderScreen();
+    expect(itemValues()).toHaveLength(2);
+
+    await user.click(screen.getByRole('checkbox', { name: /tramadol/ }));
+
+    expect(itemValues()).toEqual([
+      { ingredient: 'ibuprofeno', atc: 'M01AE01' },
+      { ingredient: 'naproxeno', atc: 'M01AE02' },
+      { ingredient: 'tramadol', atc: 'N02AX02' },
+    ]);
+    expect(screen.getByRole('checkbox', { name: /tramadol/ })).toBeChecked();
+    expect(
+      screen.getByLabelText(/Concentración/, { selector: '#item-2-strength' }),
+    ).toHaveValue('50 mg');
+    expect(
+      screen.getByLabelText(/Forma farmacéutica/, { selector: '#item-2-dose-form' }),
+    ).toHaveValue('cápsula');
+  });
+
+  it('leaves quantity and dosage to the doctor', async () => {
+    const { user } = renderScreen(blankDraft());
+
+    await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+
+    expect(screen.getByLabelText(/Cantidad/, { selector: '#item-0-quantity' })).toHaveValue(0);
+    expect(screen.getByLabelText(/Posología/, { selector: '#item-0-dosage' })).toHaveValue('');
+  });
+
+  it('adds one item per medication checked', async () => {
+    const { user } = renderScreen(blankDraft());
+
+    await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+    await user.click(screen.getByRole('checkbox', { name: /diazepam/ }));
+
+    expect(itemValues()).toEqual([
+      { ingredient: 'morfina', atc: 'N02AA01' },
+      { ingredient: 'diazepam', atc: 'N05BA01' },
+    ]);
+  });
+
+  it('removes the item when it is unchecked', async () => {
+    const { user } = renderScreen();
+
+    await user.click(screen.getByRole('checkbox', { name: /tramadol/ }));
+    expect(itemValues()).toHaveLength(3);
+
+    await user.click(screen.getByRole('checkbox', { name: /tramadol/ }));
+
+    expect(itemValues()).toEqual([
+      { ingredient: 'ibuprofeno', atc: 'M01AE01' },
+      { ingredient: 'naproxeno', atc: 'M01AE02' },
+    ]);
+    expect(screen.getByRole('checkbox', { name: /tramadol/ })).not.toBeChecked();
+  });
+
+  it('replaces the blank opening line rather than leaving it above', async () => {
+    const { user } = renderScreen(blankDraft());
+
+    await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+
+    expect(itemValues()).toEqual([{ ingredient: 'morfina', atc: 'N02AA01' }]);
+  });
+
+  it('renders checked a medication whose box wrote the line the draft carries', () => {
+    renderScreen(
+      aDraft({
+        items: [anItem({ activeIngredient: 'diazepam', atcCode: 'N05BA01' })],
+        catalogueSelections: ['diazepam'],
+      }),
+    );
+
+    expect(screen.getByRole('checkbox', { name: /diazepam/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /morfina/ })).not.toBeChecked();
+  });
+
+  describe('a line the doctor typed that happens to coincide with a catalogue entry', () => {
+    /**
+     * Exactly what checking the diazepam box would have written — typed by hand
+     * through "Añadir otro ítem" instead. The box never ran, so it must not
+     * claim the line, and clicking it must not delete it.
+     */
+    function coincidingDraft(): PrescriptionDraft {
+      return aDraft({
+        items: [
+          anItem({
+            activeIngredient: 'diazepam',
+            atcCode: 'N05BA01',
+            strength: '10 mg',
+            doseForm: 'comprimido',
+            quantity: 0,
+            dosageInstruction: '',
+          }),
+        ],
+      });
+    }
+
+    it('renders its box unchecked', () => {
+      renderScreen(coincidingDraft());
+
+      expect(screen.getByRole('checkbox', { name: /diazepam/ })).not.toBeChecked();
+    });
+
+    it('adds a second prefilled line when the box is checked, and keeps the typed one', async () => {
+      const { user } = renderScreen(coincidingDraft());
+
+      await user.click(screen.getByRole('checkbox', { name: /diazepam/ }));
+
+      expect(itemValues()).toEqual([
+        { ingredient: 'diazepam', atc: 'N05BA01' },
+        { ingredient: 'diazepam', atc: 'N05BA01' },
+      ]);
+      expect(screen.getByRole('checkbox', { name: /diazepam/ })).toBeChecked();
+    });
+  });
+
+  it('raises the duplicate-therapy alert when two entries share an ATC subgroup', async () => {
+    // diazepam N05BA01 and alprazolam N05BA12 share ATC level 4 N05BA, which is
+    // exactly what packages/rules/src/engine.ts calls a duplication.
+    const { user } = renderScreen(blankDraft());
+
+    await user.click(screen.getByRole('checkbox', { name: /diazepam/ }));
+    await user.click(screen.getByRole('checkbox', { name: /alprazolam/ }));
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(ALERT_COPY_ES.DUPLICATE_THERAPY.title);
+    expect(alert).toHaveTextContent(ALERT_COPY_ES.DUPLICATE_THERAPY.body);
+    expect(alert).toHaveTextContent('N05BA01');
+    expect(alert).toHaveTextContent('N05BA12');
+  });
+
+  describe('a line the doctor has typed into is never removed by the checkbox', () => {
+    it('keeps the item and the checkbox when a quantity has been typed', async () => {
+      const { user } = renderScreen(blankDraft());
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+
+      const quantity = screen.getByLabelText(/Cantidad/, { selector: '#item-0-quantity' });
+      await user.clear(quantity);
+      await user.type(quantity, '30');
+
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+
+      expect(itemValues()).toEqual([{ ingredient: 'morfina', atc: 'N02AA01' }]);
+      expect(screen.getByRole('checkbox', { name: /morfina/ })).toBeChecked();
+      expect(quantity).toHaveValue(30);
+    });
+
+    it('keeps the item and the checkbox when a dosage has been typed', async () => {
+      const { user } = renderScreen(blankDraft());
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+
+      const dosage = screen.getByLabelText(/Posología/, { selector: '#item-0-dosage' });
+      await user.type(dosage, '1 comprimido cada 8 horas');
+
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+
+      expect(itemValues()).toEqual([{ ingredient: 'morfina', atc: 'N02AA01' }]);
+      expect(screen.getByRole('checkbox', { name: /morfina/ })).toBeChecked();
+      expect(dosage).toHaveValue('1 comprimido cada 8 horas');
+    });
+
+    it('keeps the item and explains why when the prefilled strength has been corrected', async () => {
+      const { user } = renderScreen(blankDraft());
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+      const box = screen.getByRole('checkbox', { name: /morfina/ });
+
+      const strength = screen.getByLabelText(/Concentración/, { selector: '#item-0-strength' });
+      await user.clear(strength);
+      await user.type(strength, '20 mg');
+
+      await user.click(box);
+
+      expect(itemValues()).toEqual([{ ingredient: 'morfina', atc: 'N02AA01' }]);
+      expect(box).toBeChecked();
+      expect(strength).toHaveValue('20 mg');
+      expect(box.getAttribute('aria-describedby')).not.toBeNull();
+    });
+
+    it('explains why, in text tied to the checkbox itself', async () => {
+      const { user } = renderScreen(blankDraft());
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+      const box = screen.getByRole('checkbox', { name: /morfina/ });
+      expect(box).not.toHaveAttribute('aria-describedby');
+
+      await user.type(
+        screen.getByLabelText(/Posología/, { selector: '#item-0-dosage' }),
+        '1 comprimido cada 8 horas',
+      );
+
+      const noteId = box.getAttribute('aria-describedby');
+      expect(noteId).not.toBeNull();
+      const note = document.getElementById(noteId as string);
+      expect(note).toBeVisible();
+      expect(note).toHaveTextContent(/cantidad y posología/i);
+      expect(note).toHaveTextContent(/Quitar ítem/);
+    });
+  });
+
+  describe('the per-item removal control the hint sends the doctor to', () => {
+    it('is available on a draft that holds a single item', () => {
+      renderScreen(blankDraft());
+
+      expect(screen.getByRole('button', { name: /quitar ítem 1/i })).toBeEnabled();
+    });
+
+    it('clears the only line back to a blank one and unchecks its box', async () => {
+      // The flow the hint names: one line, typed work on it, so the checkbox
+      // refuses to remove it. The button it points at has to finish the job.
+      const { user } = renderScreen(blankDraft());
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+
+      const quantity = screen.getByLabelText(/Cantidad/, { selector: '#item-0-quantity' });
+      await user.clear(quantity);
+      await user.type(quantity, '30');
+
+      await user.click(screen.getByRole('button', { name: /quitar ítem 1/i }));
+
+      expect(itemValues()).toEqual([{ ingredient: '', atc: '' }]);
+      expect(screen.getByRole('checkbox', { name: /morfina/ })).not.toBeChecked();
+    });
+  });
+
+  describe('a prefilled line edited away from the catalogue entry', () => {
+    it('renders the box unchecked and adds a fresh line when it is checked again', async () => {
+      const { user } = renderScreen(blankDraft());
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+
+      const ingredient = screen.getByLabelText(/Principio activo/, {
+        selector: '#item-0-ingredient',
+      });
+      await user.clear(ingredient);
+      await user.type(ingredient, 'morfina liberación prolongada');
+
+      expect(screen.getByRole('checkbox', { name: /morfina/ })).not.toBeChecked();
+
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+
+      expect(itemValues()).toEqual([
+        { ingredient: 'morfina liberación prolongada', atc: 'N02AA01' },
+        { ingredient: 'morfina', atc: 'N02AA01' },
+      ]);
+      expect(screen.getByRole('checkbox', { name: /morfina/ })).toBeChecked();
+    });
+  });
+
+  it('keeps the free-text path: another item can still be added and edited', async () => {
+    const { user } = renderScreen(blankDraft());
+
+    await user.click(screen.getByRole('button', { name: /añadir otro ítem/i }));
+    const ingredient = screen.getByLabelText(/Principio activo/, { selector: '#item-1-ingredient' });
+    await user.type(ingredient, 'ibuprofeno');
+
+    expect(ingredient).toHaveValue('ibuprofeno');
+    expect(screen.getAllByRole('checkbox').filter((box) => (box as HTMLInputElement).checked)).toEqual(
+      [],
+    );
   });
 });
 

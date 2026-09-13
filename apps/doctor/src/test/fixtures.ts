@@ -85,6 +85,9 @@ export function aDraft(overrides: Partial<PrescriptionDraft> = {}): Prescription
     patientContext: { ...EMPTY_PATIENT_CONTEXT },
     validityDays: DEFAULT_VALIDITY_DAYS,
     justifications: [],
+    // No box was checked: the default draft is what the doctor typed by hand,
+    // even when its line happens to coincide with a catalogue entry.
+    catalogueSelections: [],
     ...overrides,
   };
 }

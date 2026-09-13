@@ -54,6 +54,30 @@ export interface PrescriptionDraft {
   validityDays: number;
   /** Written motives for dismissed alerts (screen D4). Never a gate. */
   justifications: AlertJustification[];
+  /**
+   * Ids of the `ControlledMedication` entries the doctor CHECKED on screen D3.
+   *
+   * WHY THE CHECKBOX NEEDS A RECORD OF ITS OWN. Read back off the item list,
+   * "this box is checked" could only mean "the draft holds a line that looks
+   * like this entry" — and a doctor who types diazepam 10 mg comprimido
+   * N05BA01 by hand through "Añadir otro ítem" produces exactly such a line.
+   * The box then rendered checked over work it never wrote, and one click on it
+   * deleted that line without confirmation or undo, because a quantity and a
+   * dosage not yet typed made the line read as untouched. So the box states
+   * what IT added; a coinciding hand-typed line renders unchecked, which is the
+   * honest answer.
+   *
+   * WHY IT LIVES HERE AND NOT ON `PrescriptionItem`. That type (packages/shared)
+   * is sealed into the signed, encrypted document: a flag per line would become
+   * part of what the doctor signs and the pharmacist verifies, for the sole
+   * benefit of a checkbox. This is draft state, it stops at
+   * `buildPrescriptionDocument`, and nothing downstream can read it.
+   *
+   * Like `justifications`, it is pruned on every edit (`editDraft`): an id whose
+   * line was withdrawn or edited away drops out rather than leaving the box
+   * checked over a line that is gone.
+   */
+  catalogueSelections: string[];
 }
 
 /** Stable machine codes for form problems. The UI maps these to its fields. */

@@ -144,6 +144,25 @@ describe('the assembled document', () => {
     expect(prescriptionDocumentSchema.safeParse(build()).success).toBe(true);
   });
 
+  /**
+   * `catalogueSelections` exists for one checkbox on D3. It is draft state, not
+   * clinical content, and the document is what the doctor signs and the
+   * pharmacist verifies — so it must stop at the boundary, on the document and
+   * on every item inside it.
+   */
+  it('leaves the D3 checkbox bookkeeping behind, on the document and on its items', () => {
+    const { document } = buildPrescriptionDocument({
+      draft: aDraft({ items: [anItem()], catalogueSelections: ['morfina'] }),
+      salt: SALT_BYTES,
+      issuedAt: ISSUED_AT_DATE,
+    });
+
+    expect(document).not.toHaveProperty('catalogueSelections');
+    for (const item of document.items) expect(item).not.toHaveProperty('catalogueSelections');
+    expect(JSON.stringify(document)).not.toContain('catalogueSelections');
+    expect(prescriptionDocumentSchema.safeParse(document).success).toBe(true);
+  });
+
   it('carries the salt and the patient identifier, and nothing else does', () => {
     const { document, issuedAtSeconds, expiresAtSeconds } = buildPrescriptionDocument({
       draft: aDraft(),
