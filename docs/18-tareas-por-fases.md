@@ -2,9 +2,11 @@
 
 La lista operativa del buildathon. El orden no es negociable y sale de [16](16-plan-de-ejecucion.md): cada fase existe para desbloquear la siguiente, y su **criterio de salida** es lo único que autoriza a pasar adelante. Una fase a medias no se deja atrás «para volver luego»; volver luego es exactamente lo que no va a ocurrir en setenta y dos horas.
 
-> **Estado al 12/09/2026.** Fase 1 cerrada: `forge test` da 13 de 13, con `test_dispense_twice_reverts` verificando el revert *con sus argumentos* y un fuzz de 256 pasadas sobre el estado absorbente. Fase 0 cerrada salvo lo que depende de la red de Avalanche Fuji. El andamiaje adelantó además parte de las fases 4 y 10 (`packages/crypto`, `shared` y `rules`, con 21 pruebas en verde): están marcadas porque existen y pasan, no porque se haya alterado el orden de prioridades.
+> **Estado al 13/09/2026. Fases 0, 1, 2 y 3 cerradas.** El proyecto está desplegado en Avalanche Fuji, chainId 43113: `SchemaRegistry`, un `EAS` v1.2.0 propio, los dos esquemas de credencial y el `PrescriptionRegistry`, este último con el código fuente verificado en el explorador. Las direcciones y los uids están anotados en [19](19-despliegue.md) y en el README de la raíz. Fase 1 quedó cerrada antes: `forge test` da 34 de 34, con `test_dispense_twice_reverts` verificando el revert *con sus argumentos* y un fuzz de 256 pasadas sobre el estado absorbente. El andamiaje adelantó además parte de las fases 4 y 10 (`packages/crypto`, `shared` y `rules`, con 21 pruebas en verde): están marcadas porque existen y pasan, no porque se haya alterado el orden de prioridades.
 >
-> **La acreditación EAS ya no está stubbeada.** `_isAccreditedPractitioner` y `_isAccreditedPharmacy` leen la attestation en EAS en cada llamada y exigen las cinco condiciones de [04](04-smart-contracts.md). `forge test` da 34 de 34: los 13 del ciclo de la receta más 21 de acreditación. Lo que queda de la fase 3 es de red, no de código, y cambió de forma con la migración: **no existe un despliegue oficial de EAS en Avalanche**, así que hay que desplegar el nuestro en Fuji con `script/DeployEAS.s.sol` y registrar los dos esquemas con `script/RegisterSchemas.s.sol`. Los dos scripts existen y compilan; lo pendiente es ejecutarlos contra Fuji con una cuenta con fondos.
+> **La acreditación EAS ya no está stubbeada.** `_isAccreditedPractitioner` y `_isAccreditedPharmacy` leen la attestation en EAS en cada llamada y exigen las cinco condiciones de [04](04-smart-contracts.md). `forge test` da 34 de 34: los 13 del ciclo de la receta más 21 de acreditación. Lo que quedaba de la fase 3 era de red y ya está hecho: **no existe un despliegue oficial de EAS en Avalanche**, así que el proyecto desplegó el suyo en Fuji con `script/DeployEAS.s.sol` y registró los dos esquemas con `script/RegisterSchemas.s.sol`.
+>
+> **Bloqueante abierto, y es el que manda ahora: en Fuji no hay ninguna cuenta acreditada.** El registro está vivo y verificado, pero `credentialOf` está vacío para todas las cuentas, así que cualquier `issue` contra Fuji revierte y la demo no corre ahí. No es cuestión de ejecutar un script que ya exista: no hay camino de herramientas. `script/SetupCredentials.s.sol` revierte con `NotTheLocalChain` fuera de la chainId 31337 y firma con una constante de compilación (la cuenta #9 de Anvil), y `receta setup-credentials` está cerrado por tres sitios —`assertLocalChain` solo acepta 31337 y 1337, `assertLocalEas` exige el mock, e `issueAndRegister` llama a `attestWithUid`, que solo existe en `MockEAS`—. Acreditar en Fuji exige llamadas directas a `EAS.attest()` firmadas por `ISSUER_AUTHORITY` y un `registerCredential(uid)` por titular, con su propia clave. Detalle completo en [19](19-despliegue.md). La demo local sobre Anvil no está afectada.
 
 > **La regla que gobierna esta lista.** Si algo no aparece aquí, no se construye. Toda idea nueva se anota en [09](09-roadmap.md) como fase posterior y se sigue con la tarea en curso.
 
@@ -19,7 +21,7 @@ Prerequisito de todo lo demás. **No es progreso hacia la demo**: que Docker lev
 - [x] `tsconfig.base.json` con `strict: true` y rutas a `@recetas/shared`, `@recetas/crypto`, `@recetas/rules`
 - [x] `docker compose up -d` levanta Postgres y Anvil
 - [x] `env.example` con `DATABASE_URL`, `RPC_URL`, `FUJI_RPC_URL`
-- [ ] Obtener AVAX de testnet de Fuji en la cuenta de despliegue
+- [x] Obtener AVAX de testnet de Fuji en la cuenta de despliegue — la cuenta tiene 3,499 AVAX, y el despliegue completo del 13/09/2026 lo demuestra: los tres scripts y la verificación costaron juntos menos de 0,001 AVAX
 - [x] Acceso al RPC público de Fuji (`https://api.avax-test.network/ext/bc/C/rpc`) comprobado el 12/09/2026: `eth_chainId` devuelve `0xa869`, que es 43113, y `eth_blockNumber`, `0x37a2d0b`
 - [x] Recuperación ante un RPC que se cae a mitad del despliegue, documentada en [19](19-despliegue.md): Foundry no reintenta el broadcast, se reenvía con `--resume`
 
@@ -52,32 +54,34 @@ Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 ## Fase 2 — Despliegue en Avalanche Fuji
 
 - [x] `script/Deploy.s.sol` — **validado contra Anvil**: despliega, y el ciclo `issue` → `dispense` → `dispense` revierte con `AlreadyDispensed` devolviendo `dispensedBy` y `dispensedAt` correctos
-- [ ] Desplegar con `--broadcast --verify`
-- [ ] Verificar el código fuente en el explorador
-- [ ] Anotar la dirección en el README de la raíz
+- [x] Desplegar con `--broadcast --verify` — hecho el 13/09/2026 en Fuji: `PrescriptionRegistry` en `0xD5F2d5aD03703a9Ee11078d86181421E2E078365`
+- [x] Verificar el código fuente en el explorador — `Pass - Verified` en Routescan, y Snowtrace sirve el mismo código porque hoy funciona sobre Routescan
+- [x] Anotar la dirección en el README de la raíz — sección *Live deployment*, con las tres direcciones, los dos uids, el emisor y el enlace al explorador
 
 **Criterio de salida:** dirección pública y explorable. Desbloquea todo lo que necesita hablar contra un contrato real.
 
 > **El orden de esta lista ya no se sostiene: la Fase 2 no puede ir antes que la 3.** `script/Deploy.s.sol` revierte fuera de la chain 31337 si falta `EAS_ADDRESS`, cualquiera de los dos uids de esquema o `ISSUER_AUTHORITY` (`MissingEasAddress`, `MissingPractitionerSchema`, `MissingPharmacySchema`, `MissingIssuerAuthority`, líneas 57-60), y esos cuatro valores los producen `DeployEAS.s.sol` y `RegisterSchemas.s.sol`, que esta lista archiva en la Fase 3. Antes de la migración no era así: EAS venía dado por la red y la Fase 2 era autónoma. La secuencia real en Fuji es cuenta financiada → `DeployEAS` → `RegisterSchemas` → `Deploy`.
 
-> El guion de despliegue ya no es un salto al vacío: se ejecutó contra un nodo real (Anvil, chainId 31337) y el ciclo completo de la demo funcionó sobre el contrato desplegado. Lo que falta para Fuji no es solo fondos: hace falta una cuenta de despliegue financiada, una `ISSUER_AUTHORITY` cuya clave se controle, y el EAS propio desplegado **antes** — ver la nota de orden aquí abajo.
+> **Desplegado en Fuji el 13/09/2026, en la secuencia que la nota de arriba exige.** `PrescriptionRegistry` vive en `0xD5F2d5aD03703a9Ee11078d86181421E2E078365`, construido contra el `EAS` propio `0x27781D2242a68e4D234bc0A5a15333D0CD80c58A` y los dos uids reales que imprimió `RegisterSchemas.s.sol`. Se comprobó uno a uno que `registry.eas()`, `registry.issuerAuthority()`, `registry.practitionerSchema()` y `registry.pharmacySchema()` devuelven exactamente lo anotado. `ISSUER_AUTHORITY` es `0x613F14B919317b515D8804915a8E82f926C86c0C`, que es **la propia cuenta de despliegue**: el proyecto controla una sola clave, así que desplegador y autoridad emisora colapsan en una, y la separación que describe `env.example` queda como deuda declarada del MVP, no como algo hecho. Como ese valor es `immutable` y `_readCredential` rechaza cualquier attestation de otro `attester`, equivocarlo obliga a redesplegar el registro entero. Coste total del procedimiento: menos de 0,001 AVAX. Detalle y direcciones completas en [19](19-despliegue.md).
 
-> **La verificación del código fuente está sin comprobar.** Fuji es de tier pago en Etherscan V2, así que la key gratuita de Etherscan no sirve y `[etherscan]` apunta a Routescan (`https://api.routescan.io/v2/network/testnet/evm/43113/etherscan`, con la key literal `verifyContract`). Esa configuración **no se ha probado todavía contra un despliegue real**: hasta que `--verify` funcione una vez en Fuji, es un supuesto, no un hecho. El explorador de referencia es `https://testnet.snowtrace.io`.
+> **La verificación del código fuente está comprobada.** Fuji es de tier pago en Etherscan V2, así que la key gratuita de Etherscan no sirve y `[etherscan]` apunta a Routescan (`https://api.routescan.io/v2/network/testnet/evm/43113/etherscan`, con la key literal `verifyContract`). Esa configuración se ejercitó en el despliegue real y funcionó tal cual, sin corregir nada: el envío queda unos quince segundos en `Pending in queue` y después devuelve `Pass - Verified`. Forge envía además el código a Sourcify en paralelo por su cuenta. Los dos exploradores sirven el mismo código verificado —Snowtrace funciona hoy sobre Routescan—, así que `https://testnet.snowtrace.io` sigue siendo una referencia válida y no hay nada que cambiar en la configuración ni en el código.
+
+> **Desplegado no es lo mismo que utilizable: en Fuji no hay ninguna cuenta acreditada.** El criterio de salida de esta fase —dirección pública y explorable— está cumplido, pero el contrato vivo no puede emitir ni dispensar todavía porque nadie tiene credencial en él, y no existe herramienta que las emita fuera de Anvil. Es el bloqueante que gobierna la demo; está descrito en el encabezado de este documento y en detalle en [19](19-despliegue.md).
 
 ## Fase 3 — Credenciales EAS
 
 - [x] `IEAS.sol` con el struct `Attestation` transcrito campo a campo de EAS v1.2.0 — un desajuste de orden o de tipo decodifica `revocationTime` desde otra ranura y deja pasar una credencial revocada
 - [x] `registerCredential(bytes32 uid)` — auto-registro sin administrador, con las cinco comprobaciones en el momento de registrar y un error propio por motivo
 - [x] Conectar `_isAccreditedPractitioner` y `_isAccreditedPharmacy` contra EAS, releyendo la attestation en cada `issue` y cada `dispense` y sin cachear nunca el veredicto
-- [x] Registrar el esquema `PractitionerCredential` (`licenseNumber`, `specialtyCode`, `issuerAuthority`, `validFrom`, `validUntil`) — **en el EAS local**; pendiente en el `SchemaRegistry` propio de Fuji
-- [x] Registrar el esquema `PharmacyCredential` (`pharmacyLicense`, `sanitaryRegistryRef`, `issuerAuthority`, `validFrom`, `validUntil`) — **en el EAS local**; pendiente en el `SchemaRegistry` propio de Fuji
+- [x] Registrar el esquema `PractitionerCredential` (`licenseNumber`, `specialtyCode`, `issuerAuthority`, `validFrom`, `validUntil`) — en el EAS local **y en el `SchemaRegistry` propio de Fuji**
+- [x] Registrar el esquema `PharmacyCredential` (`pharmacyLicense`, `sanitaryRegistryRef`, `issuerAuthority`, `validFrom`, `validUntil`) — en el EAS local **y en el `SchemaRegistry` propio de Fuji**
 - [x] Emitir attestation de prueba para un médico — `script/SetupCredentials.s.sol` y `receta setup-credentials`
 - [x] Emitir attestation de prueba para una farmacia — las dos farmacias de la demo
 - [x] Probar los cinco motivos de rechazo: sin credencial, emisor no autorizado, revocada, caducada, dirigida a otra cuenta — para los dos roles, en el registro y en el uso
 - [x] `script/Deploy.s.sol` falla ruidosamente fuera de la cadena 31337 si falta la dirección de EAS, un uid de esquema o el emisor autorizado
-- [ ] Desplegar EAS v1.2.0 propio en Fuji con `script/DeployEAS.s.sol`: primero `SchemaRegistry`, luego `EAS(schemaRegistry)`. El script existe y compila; falta ejecutarlo con fondos
-- [ ] Registrar los dos esquemas en ese `SchemaRegistry` con `script/RegisterSchemas.s.sol` y anotar los uids que imprime. El script existe y compila; falta ejecutarlo
-- [ ] Volcar el resultado al entorno: `EAS_ADDRESS`, `SCHEMA_REGISTRY_ADDRESS`, `PRACTITIONER_SCHEMA_UID` y `PHARMACY_SCHEMA_UID`
+- [x] Desplegar EAS v1.2.0 propio en Fuji con `script/DeployEAS.s.sol`: primero `SchemaRegistry`, luego `EAS(schemaRegistry)` — hecho el 13/09/2026. `SchemaRegistry` en `0xD4aFA6F68be2eb0c99D3B421B7f52a6420217efb` y `EAS` en `0x27781D2242a68e4D234bc0A5a15333D0CD80c58A`; las dos `version()` devuelven `1.2.0` y `EAS.getSchemaRegistry()` apunta al registro de al lado
+- [x] Registrar los dos esquemas en ese `SchemaRegistry` con `script/RegisterSchemas.s.sol` y anotar los uids que imprime — `PractitionerCredential` es `0x5b8d9aff12e1409f3603c9bcca659c1e1dc8d8b4faf219b674d743f6ec54f233` y `PharmacyCredential` es `0xac44c9573bebb0b5622ea078c08bea286ad1d99566d317a32393a9e71fbff500`
+- [x] Volcar el resultado al entorno: `EAS_ADDRESS`, `SCHEMA_REGISTRY_ADDRESS`, `PRACTITIONER_SCHEMA_UID` y `PHARMACY_SCHEMA_UID` — los cuatro valores entraron al entorno de despliegue y son los que `Deploy.s.sol` grabó como inmutables en el registro
 
 > **No hay EAS canónico en Avalanche.** El directorio `deployments/` del repositorio de `eas-contracts` lista 26 redes y ninguna es de Avalanche, así que aquí no existe ni instancia oficial ni predeploy al que apuntar: las direcciones de EAS y del `SchemaRegistry` son **nuestras**, salidas de nuestro propio despliegue, y hay que tratarlas como tales en toda la documentación y la configuración.
 
@@ -86,6 +90,8 @@ Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 **Criterio de salida:** el contrato rechaza a una cuenta sin credencial. Desbloquea la CLI.
 
 > Cerrada en lo que depende de nosotros. `forge test` da 34 de 34, con `test_dispense_without_credential_reverts` y `test_dispense_with_revoked_credential_reverts` entre ellas. La decisión de diseño está documentada en [04](04-smart-contracts.md): `credentialOf` lo escribe cada cuenta para sí misma, porque [D-14](04-smart-contracts.md#d-14) exige un contrato sin administrador y el permiso de escritura no vale nada — un uid ajeno o firmado por otro emisor no supera las comprobaciones. La CLI acredita las tres cuentas de la demo (`receta setup-credentials`, o el acto 0 de `receta demo`) y `receta demo --revoked` enseña el rechazo: la autoridad revoca la credencial de la farmacia en EAS y la entrega siguiente muere con `NotAccreditedPharmacy`, sin que nadie toque el registro de recetas.
+>
+> **Eso vale en Anvil y solo en Anvil.** La acreditación automática está atada a la cadena local por diseño: `script/SetupCredentials.s.sol` revierte con `NotTheLocalChain` fuera de la chainId 31337 y firma con una constante de compilación (`LocalDemo.ISSUER_AUTHORITY_KEY`, la cuenta #9 de Anvil), y `receta setup-credentials` está cerrado por `assertLocalChain` (solo 31337 y 1337), por `assertLocalEas` (exige que el EAS sea el mock) y por `issueAndRegister`, que llama a `attestWithUid`, una función de `MockEAS` que un EAS v1.2.0 real no tiene. **En Fuji el registro desplegado tiene cero cuentas acreditadas y no hay herramienta que lo cambie**, así que la demo contra la red pública no corre hasta construir ese camino: `EAS.attest()` firmado por `ISSUER_AUTHORITY`, y un `registerCredential(uid)` por cada titular con su propia clave.
 
 ## Fase 4 — CLI de demo
 
@@ -101,6 +107,8 @@ Nada empieza antes de esto. Ni el diseño, ni la API, ni una línea de React.
 - [x] Comando `demo` — el guion completo en una sola orden, con el rechazo decodificado
 
 **Criterio de salida:** corre de punta a punta contra el contrato desplegado.
+
+> **Cerrada contra Anvil, bloqueada contra Fuji.** El criterio de salida se cumple sobre el despliegue local; sobre el despliegue público del 13/09/2026 no, y el motivo no es la CLI sino que en Fuji **no hay ninguna cuenta acreditada** y ninguna herramienta actual puede acreditarla (ver la nota de la Fase 3 y [19](19-despliegue.md)). Sin credencial, el acto 1 de `receta demo` muere en el `issue`.
 
 > Cerrada. El paquete es `apps/cli` (`@recetas/cli`, binario `receta`) y corre contra Anvil con el `PrescriptionRegistry` ya desplegado: `receta demo` completa los tres actos y el segundo intento de dispensación muestra `AlreadyDispensed` decodificado, con la farmacia y la fecha. Los nueve errores personalizados de [04](04-smart-contracts.md) tienen mensaje propio, y «Caducada» se deriva comparando `expiresAt` con la hora del bloque, nunca del enum.
 
@@ -160,7 +168,7 @@ Ocho pantallas, maquetadas en `design/mockups/pharmacy.html`. Es la única PWA d
 ## Fase 8 — Materiales de entrega
 
 - [ ] README con funcionalidades, instalación, ejecución y enfoque de integración técnica
-- [ ] Dirección del contrato y enlace al explorador
+- [x] Dirección del contrato y enlace al explorador — sección *Live deployment* del README de la raíz, con las tres direcciones, los dos uids de esquema, el emisor autorizado y el enlace a Routescan
 - [ ] Los tres materiales exigidos en [15](15-track-y-entrega.md)
 - [ ] **Confirmar el canal real de entrega contra la fuente oficial del evento ([D-28](15-track-y-entrega.md))**
 

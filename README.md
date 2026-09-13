@@ -9,6 +9,27 @@ Built for an Ethereum buildathon in Cochabamba, Bolivia.
 
 ---
 
+## Live deployment
+
+Deployed and source-verified on **Avalanche Fuji, chainId 43113**, on 13 September 2026.
+
+| Contract / value | Address or uid |
+|---|---|
+| `PrescriptionRegistry` | [`0xD5F2d5aD03703a9Ee11078d86181421E2E078365`](https://testnet.snowscan.xyz/address/0xd5f2d5ad03703a9ee11078d86181421e2e078365) — verified |
+| `EAS` v1.2.0 (this project's own) | `0x27781D2242a68e4D234bc0A5a15333D0CD80c58A` |
+| `SchemaRegistry` | `0xD4aFA6F68be2eb0c99D3B421B7f52a6420217efb` |
+| `PRACTITIONER_SCHEMA_UID` | `0x5b8d9aff12e1409f3603c9bcca659c1e1dc8d8b4faf219b674d743f6ec54f233` |
+| `PHARMACY_SCHEMA_UID` | `0xac44c9573bebb0b5622ea078c08bea286ad1d99566d317a32393a9e71fbff500` |
+| Issuer authority | `0x613F14B919317b515D8804915a8E82f926C86c0C` |
+
+Avalanche has no official EAS deployment, so the `SchemaRegistry`, the `EAS` and
+both credential schemas above are this project's own. The issuer authority is
+currently the deployer account itself — a separate authority is the pilot
+target, not what is deployed today. Deployment procedure, sanity checks and open
+items: [docs/19](docs/19-despliegue.md).
+
+---
+
 ## Quick start
 
 ### Requirements
@@ -118,21 +139,32 @@ anyone.
 
 On Avalanche Fuji those four values do not come from the network — **there is no
 official EAS deployment on Avalanche**, so the project deploys its own EAS
-v1.2.0 first and the three scripts run in order:
+v1.2.0 first and the three scripts run in order. Two details that are easy to
+miss: Foundry loads `.env` from `contracts/`, where `foundry.toml` lives, and
+**not** from the repository root where this project keeps its `.env`, so export
+it into the shell first; and the scripts call `vm.broadcast()` with no key
+argument, so the deployer key is passed on the command line. Full procedure in
+[docs/19](docs/19-despliegue.md).
 
 ```bash
+cd contracts
+set -a; . ../.env; set +a
+
 # 1. SchemaRegistry, then EAS(schemaRegistry). Prints both addresses.
 #    Refuses to run on chainId 31337, where MockEAS already exists.
-forge script script/DeployEAS.s.sol --rpc-url fuji --broadcast
+forge script script/DeployEAS.s.sol --rpc-url fuji --broadcast \
+  --private-key "$DEPLOYER_PRIVATE_KEY"
 
 # 2. The two credential schemas. Prints their uids. Idempotent.
 SCHEMA_REGISTRY_ADDRESS=0x... \
-forge script script/RegisterSchemas.s.sol --rpc-url fuji --broadcast
+forge script script/RegisterSchemas.s.sol --rpc-url fuji --broadcast \
+  --private-key "$DEPLOYER_PRIVATE_KEY"
 
 # 3. The registry itself.
 EAS_ADDRESS=0x... PRACTITIONER_SCHEMA_UID=0x... PHARMACY_SCHEMA_UID=0x... \
 ISSUER_AUTHORITY=0x... \
-forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify
+forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify \
+  --private-key "$DEPLOYER_PRIVATE_KEY"
 ```
 
 Those schema uids are **not** the ones `LocalDemo.sol` uses on Anvil: the real

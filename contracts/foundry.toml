@@ -40,6 +40,8 @@ version = "=0.8.24"
 paths = "script/SetupCredentials.s.sol"
 version = "=0.8.24"
 
+
+
 [profile.ci]
 verbosity = 3
 fuzz = { runs = 1024 }
@@ -67,7 +69,11 @@ fuji = "${FUJI_RPC_URL}"
 #     --verifier-url 'https://api.routescan.io/v2/network/testnet/evm/43113/etherscan' \
 #     --etherscan-api-key verifyContract
 #
-# PENDIENTE DE COMPROBACION EMPIRICA: this endpoint has not been exercised yet.
-# Confirm it on the first Fuji deployment and correct it here if it differs.
+# CONFIRMED on the first Fuji deployment (13/09/2026): the entry below works as
+# written, the literal "verifyContract" key included. `forge script --verify`
+# submitted the source, the job sat "Pending in queue" for roughly fifteen
+# seconds and then returned "Pass - Verified". Forge also submits to Sourcify in
+# parallel on its own. Both testnet.snowtrace.io and the Routescan explorer
+# serve the verified source, because Snowtrace is Routescan-powered today.
 [etherscan]
 fuji = { key = "${ROUTESCAN_API_KEY}", chain = 43113, url = "https://api.routescan.io/v2/network/testnet/evm/43113/etherscan" }
