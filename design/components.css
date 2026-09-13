@@ -259,7 +259,6 @@ body {
 .alert__title { font-weight: var(--weight-semibold); margin: 0 0 var(--space-1); }
 .alert__body { margin: 0; color: var(--color-text-secondary); }
 
-.alert--success { background: var(--color-success-surface); border-left-color: var(--color-success); }
 .alert--danger  { background: var(--color-danger-surface);  border-left-color: var(--color-danger); }
 .alert--warning { background: var(--color-warning-surface); border-left-color: var(--color-warning); }
 .alert--info    { background: var(--color-info-surface);    border-left-color: var(--color-info); }

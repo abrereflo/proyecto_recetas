@@ -1,6 +1,8 @@
-# Receta electrónica verificable sobre Ethereum — documentación del proyecto
+# Receta electrónica verificable sobre Avalanche — documentación del proyecto
 
-Un médico firma una receta sin saber qué es una wallet y sin pagar gas; la farmacia la verifica escaneando un QR; el segundo intento de dispensar esa misma receta es rechazado por el contrato. Eso es lo que construimos y lo que se demuestra. Corre sobre **Avalanche Fuji**, la testnet pública de la C-Chain de Avalanche —una L1 EVM independiente, no un L2 de Ethereum—, con abstracción de cuenta, paymaster y credenciales profesionales emitidas como attestations.
+Un médico firma una receta, la farmacia la verifica escaneando un QR y el segundo intento de dispensar esa misma receta es rechazado por el contrato. Eso es lo que construimos y lo que se demuestra. Corre sobre **Avalanche Fuji**, la testnet pública de la C-Chain de Avalanche —una L1 EVM independiente, no un L2 de Ethereum—, con credenciales profesionales emitidas como attestations.
+
+Que el médico firme sin saber qué es una wallet y sin pagar gas es el objetivo, no lo que ocurre hoy. La abstracción de cuenta con passkey y el paymaster están construidos y probados —`PasskeyAccount`, `PrescriptionPaymaster`, el cliente de passkey y un relayer propio—, pero no hay nada desplegado y ninguna aplicación los llama: hoy el médico firma con una wallet del navegador y paga su propio gas de prueba. Ver [01](01-arquitectura.md) y [18, Fase 5](18-tareas-por-fases.md).
 
 > **Contexto: buildathon de Ethereum, Cochabamba (Bolivia).**
 > Tres días de construcción y un pitch con demo de tres minutos. Esta documentación existe para sostener esa demo y ese pitch, no para describir un sistema hipotético completo. Todo lo que no sea construible y demostrable está marcado como fase posterior.

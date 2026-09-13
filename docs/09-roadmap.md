@@ -48,7 +48,7 @@ Si el tiempo aprieta, se recorta en este orden y solo en este orden:
 | Riesgo | Probabilidad | Impacto | Mitigación |
 |---|---|---|---|
 | El precompilado P-256 no está disponible en Avalanche Fuji | **Descartado: verificado** | Alto | El riesgo se cerró comprobándolo el primer día: RIP-7212 responde en `0x…0100` en Fuji, contrastado con una firma P-256 propia. La alternativa (verificación P-256 en Solidity, o firma secp256k1 con clave generada en el navegador) se conserva solo como respaldo |
-| El proveedor de bundler o paymaster falla | Media | Alto | Segundo proveedor configurado desde el inicio |
+| El proveedor de bundler o paymaster falla | **Descartado: no hay proveedor** | Alto | El riesgo se cerró construyendo el relayer y el paymaster en el repositorio. `handleOps` del EntryPoint v0.7 es `public` y sin control de acceso, así que no hace falta un tercero que pueda caerse. A cambio queda el riesgo de operación: desplegar y financiar el paymaster, que sigue abierto ([D-02](01-arquitectura.md)) |
 | Integración con EAS más lenta de lo previsto | Media | Medio | Alternativa: registro de credenciales propio en veinte líneas de Solidity, documentando que EAS es el destino |
 | El equipo no domina Foundry | Baja | Alto | Hardhat como alternativa, decidida en las primeras horas y no después |
 | El cifrado en el navegador consume más tiempo del previsto | Media | Medio | WebCrypto API nativa, sin dependencias |

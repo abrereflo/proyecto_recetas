@@ -267,6 +267,8 @@ Se elige el registro en emisión por legibilidad de la demo. La variante diferid
 | Denegación por gas | `dispense` es de coste constante; no hay bucles sobre estructuras crecientes |
 | Errores personalizados | `error` en lugar de `require` con cadena: menor gas y mensajes accionables en la interfaz |
 
+<a id="d-14"></a>
+
 > **Decisión pendiente — D-14**
 > **Contexto.** El contrato del MVP es deliberadamente inmutable y mínimo. Un piloto real necesitará cambios.
 > **Opciones.** (a) Inmutable, con despliegue de una versión nueva y migración explícita. (b) Proxy UUPS tras multifirma. (c) Proxy con retardo temporal obligatorio antes de cada actualización.

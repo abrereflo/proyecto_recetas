@@ -104,8 +104,8 @@ Seven steps, in the order of the "dispensar" sequence of
 6. correspondence: `keccak256(patientId, salt) == patientCommitment`
 7. `dispense()` on-chain
 
-Every failure names its own reason. The nine custom errors of the registry are
-decoded into nine distinct Spanish messages, each with its own next step:
+Every failure names its own reason. The 16 custom errors of the registry are
+decoded into 16 distinct Spanish messages, each with its own next step:
 collapsing "already dispensed" and "tampered content" into one generic failure
 turns two very different situations into the same shrug
 ([docs/17](../../docs/17-diseno-y-experiencia.md)).
@@ -129,7 +129,10 @@ turns two very different situations into the same shrug
   nonces, and replaying an identical document already reverts with
   `AlreadyIssued`. The field stays in the type so adding a real nonce later does
   not change the type hash.
-- Credential checks are stubbed in the contract
-  (`_isAccreditedPractitioner` / `_isAccreditedPharmacy` return `true`), so
-  `NotAccreditedPractitioner` and `NotAccreditedPharmacy` are decoded and
-  worded, but cannot be triggered on Anvil yet. That is phase 3.
+- Credential checks are live in the contract: `_isAccreditedPractitioner` /
+  `_isAccreditedPharmacy` re-read the attestation from EAS on every call, so a
+  revocation bites on the very next transaction. Both `NotAccreditedPractitioner`
+  and `NotAccreditedPharmacy` are reachable on Anvil today — `receta demo
+  --revoked` (see the root [README](../../README.md)) walks exactly that path:
+  the authority withdraws the pharmacy's credential and the next dispensing
+  dies with `NotAccreditedPharmacy`.
