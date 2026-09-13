@@ -20,10 +20,10 @@ abstract contract PaymasterFixture is RegistryFixture, P256Fixture {
     ///      driven with `vm.prank`, exactly as `PasskeyAccount.t.sol` does.
     address internal constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
-    /// @dev Deliberately tiny. The recommended production value is 40 a day and
+    /// @dev Deliberately tiny. The recommended production value is 25 a day and
     ///      the reasoning is in the constructor's NatSpec; a test that had to
-    ///      sponsor forty operations to reach the limit would be forty times
-    ///      slower and no clearer about what the limit does.
+    ///      sponsor twenty-five operations to reach the limit would be
+    ///      twenty-five times slower and no clearer about what the limit does.
     uint32 internal constant OPS_PER_WINDOW = 3;
 
     uint64 internal constant WINDOW = 1 days;
