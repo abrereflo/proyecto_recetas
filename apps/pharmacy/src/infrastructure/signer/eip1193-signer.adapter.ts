@@ -1,10 +1,14 @@
 import { numberToHex } from 'viem';
+import { addEthereumChainParams } from '@recetas/chain';
 import type { Address } from '@recetas/shared';
 import {
   SignerRejectedError,
   SignerUnavailableError,
+  type Eip1193Provider,
   type SignerPort,
 } from '../../ports/signer.port';
+import type { PharmacyConfig } from '../config/env';
+import { USER_REJECTED, UNRECOGNISED_CHAIN, errorCode } from '../eip1193-errors';
 
 /**
  * `SignerPort` over the browser's injected EIP-1193 provider.
@@ -19,17 +23,6 @@ import {
  * boundary is what makes that swap a one-file change.
  */
 
-export interface Eip1193Provider {
-  request(args: { method: string; params?: unknown[] | object }): Promise<unknown>;
-  on?(event: string, listener: (...args: unknown[]) => void): void;
-  removeListener?(event: string, listener: (...args: unknown[]) => void): void;
-}
-
-/** Error code EIP-1193 reserves for "the user said no". */
-const USER_REJECTED = 4001;
-/** Error code EIP-3085/1193 returns when the chain is not known to the provider. */
-const UNRECOGNISED_CHAIN = 4902;
-
 declare global {
   interface Window {
     ethereum?: Eip1193Provider;
@@ -40,24 +33,63 @@ export function injectedProvider(): Eip1193Provider | undefined {
   return typeof globalThis.window === 'undefined' ? undefined : globalThis.window.ethereum;
 }
 
-function errorCode(error: unknown): number | undefined {
-  if (typeof error !== 'object' || error === null) return undefined;
-  const code = (error as { code?: unknown }).code;
-  return typeof code === 'number' ? code : undefined;
-}
-
 function firstAddress(value: unknown): Address | null {
   if (!Array.isArray(value)) return null;
   const [first] = value as unknown[];
   return typeof first === 'string' ? (first as Address) : null;
 }
 
+/** Today's message: the chain the recetas system lives on is not configured. */
+function chainNotConfiguredMessage(chainId: number): string {
+  return (
+    `El dispositivo no tiene configurada la cadena ${chainId}, que es donde está ` +
+    'registrado el sistema de recetas.'
+  );
+}
+
+function switchChain(provider: Eip1193Provider, chainId: number): Promise<unknown> {
+  return provider.request({
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: numberToHex(chainId) }],
+  });
+}
+
+/**
+ * Corte 1 (docs/21): the extension answered 4902, so it does not know the
+ * chain. Offer `wallet_addEthereumChain` with the parameters `buildChain`
+ * already derives from configuration, then retry the switch exactly once.
+ */
+async function addChainThenRetrySwitch(
+  provider: Eip1193Provider,
+  chainId: number,
+  config: PharmacyConfig,
+): Promise<void> {
+  try {
+    await provider.request({
+      method: 'wallet_addEthereumChain',
+      params: [addEthereumChainParams({ chainId, rpcUrl: config.rpcUrl })],
+    });
+  } catch (error) {
+    if (errorCode(error) === USER_REJECTED) throw new SignerRejectedError({ cause: error });
+    throw new Error(chainNotConfiguredMessage(chainId));
+  }
+
+  try {
+    await switchChain(provider, chainId);
+  } catch (error) {
+    if (errorCode(error) === USER_REJECTED) throw new SignerRejectedError({ cause: error });
+    throw new Error(chainNotConfiguredMessage(chainId));
+  }
+}
+
 export interface Eip1193SignerOptions {
+  config: PharmacyConfig;
   /** Resolved lazily so a provider injected after load is still picked up. */
   getProvider?: () => Eip1193Provider | undefined;
 }
 
-export function createEip1193Signer(options: Eip1193SignerOptions = {}): SignerPort {
+export function createEip1193Signer(options: Eip1193SignerOptions): SignerPort {
+  const { config } = options;
   const getProvider = options.getProvider ?? injectedProvider;
 
   const require = (): Eip1193Provider => {
@@ -70,6 +102,8 @@ export function createEip1193Signer(options: Eip1193SignerOptions = {}): SignerP
     isAvailable() {
       return getProvider() !== undefined;
     },
+
+    getProvider,
 
     async getAccount() {
       const provider = getProvider();
@@ -100,20 +134,17 @@ export function createEip1193Signer(options: Eip1193SignerOptions = {}): SignerP
       if (typeof current === 'string' && Number.parseInt(current, 16) === chainId) return;
 
       try {
-        await provider.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: numberToHex(chainId) }],
-        });
+        await switchChain(provider, chainId);
       } catch (error) {
         const code = errorCode(error);
         if (code === USER_REJECTED) throw new SignerRejectedError({ cause: error });
-        if (code === UNRECOGNISED_CHAIN) {
-          throw new Error(
-            `El dispositivo no tiene configurada la cadena ${chainId}, que es donde está ` +
-              'registrado el sistema de recetas.',
-          );
-        }
-        throw error;
+        if (code !== UNRECOGNISED_CHAIN) throw error;
+
+        // The extension does not know this chain yet (EIP-3085): offer to add
+        // it, once, and retry the switch, once. Anything else — the person
+        // declining the add prompt, the add failing, or the retried switch
+        // failing again — falls back to today's message.
+        await addChainThenRetrySwitch(provider, chainId, config);
       }
     },
   };

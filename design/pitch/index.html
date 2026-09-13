@@ -1,0 +1,690 @@
+<title>VeriMed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap">
+
+<style>
+/* ---------------------------------------------------------------------------
+ * VeriMed — guion de pitch, 3 minutos.
+ *
+ * Deliberadamente de un solo tema (oscuro): esto se proyecta en una sala con
+ * luz ambiente, donde un fondo claro se lava. Todo color se pinta explícito,
+ * así que la página se sostiene sobre cualquier fondo del host.
+ *
+ * Navegación: flechas, espacio, o clic. `f` para pantalla completa.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* Tinta de libro de control: azul profundo, no negro puro. */
+  --ink:            #0d1620;
+  --ink-raised:     #16222e;
+  --ink-line:       #24384a;
+
+  --text:           #e8eef4;
+  --text-soft:      #cbd9e5;
+  --text-faint:     #93a9bb;
+
+  /* Azul institucional del propio sistema de diseño (theme-color #0b5cab),
+     abierto para que respire sobre fondo oscuro. */
+  --accent:         #4a9eea;
+  --accent-deep:    #0b5cab;
+
+  /* Ocre de papel de seguridad: SOLO la columna del papel. */
+  --paper:          #d9a441;
+
+  --danger:         #ff5d62;
+  --danger-deep:    #7d1d20;
+  --success:        #3dd68c;
+
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  --sans: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 500;
+  overflow: hidden;
+}
+
+/* --- Marco de diapositiva ------------------------------------------------ */
+
+.deck { position: relative; width: 100vw; height: 100vh; }
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: clamp(2rem, 4.2vw, 4.5rem);
+  padding-bottom: clamp(3.5rem, 6vw, 5.5rem);
+  overflow-y: auto;
+}
+.slide[data-active="true"] { display: flex; }
+
+.eyebrow {
+  font-size: clamp(0.72rem, 1.02vw, 0.92rem);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 clamp(0.9rem, 1.8vw, 1.6rem);
+}
+
+h1, h2 {
+  margin: 0;
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+h2 { font-size: clamp(1.9rem, 4.1vw, 3.5rem); }
+
+.lede {
+  font-size: clamp(1.08rem, 1.8vw, 1.62rem);
+  line-height: 1.42;
+  color: var(--text);
+  max-width: 34ch;
+  margin: clamp(0.9rem, 1.8vw, 1.5rem) 0 0;
+  text-wrap: balance;
+}
+
+/* --- Riel de tiempo ------------------------------------------------------ */
+
+.rail {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 clamp(2rem, 4.2vw, 4.5rem) clamp(1.1rem, 2vw, 1.6rem);
+  font-family: var(--mono);
+  font-size: clamp(0.74rem, 1.02vw, 0.92rem);
+  color: var(--text-soft);
+}
+.rail-track {
+  flex: 1;
+  height: 2px;
+  background: var(--ink-line);
+  position: relative;
+}
+.rail-fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
+.rail strong { color: var(--text-soft); font-weight: 700; }
+
+/* --- Portada ------------------------------------------------------------- */
+
+.cover { justify-content: center; }
+.wordmark {
+  font-size: clamp(4rem, 13vw, 11rem);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 0.86;
+  margin: 0;
+}
+.tagline {
+  font-size: clamp(1.25rem, 2.6vw, 2.1rem);
+  font-weight: 500;
+  color: var(--accent);
+  margin: clamp(0.8rem, 1.6vw, 1.4rem) 0 0;
+  letter-spacing: -0.01em;
+}
+.cover-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.6rem;
+  margin-top: clamp(1.6rem, 3.4vw, 3rem);
+  font-family: var(--mono);
+  font-size: clamp(0.8rem, 1.15vw, 1rem);
+  color: var(--text-soft);
+}
+.cover-meta b { color: var(--text-soft); font-weight: 700; }
+
+/* --- Rejillas ------------------------------------------------------------ */
+
+.cols {
+  display: grid;
+  gap: clamp(1rem, 2.2vw, 2rem);
+  margin-top: clamp(1.2rem, 2.6vw, 2.2rem);
+  flex: 1;
+  align-content: start;
+}
+.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+.panel {
+  background: var(--ink-raised);
+  border: 1px solid var(--ink-line);
+  border-radius: 10px;
+  padding: clamp(1rem, 1.9vw, 1.7rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.panel h3 {
+  margin: 0;
+  font-size: clamp(1.04rem, 1.58vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.panel p { margin: 0; font-size: clamp(0.95rem, 1.42vw, 1.26rem); line-height: 1.55; color: var(--text-soft); }
+
+/* El papel lleva su propio color; sólo el papel. */
+.panel.paper { border-color: rgba(217, 164, 65, 0.42); }
+.panel.paper h3 { color: var(--paper); }
+.panel.chain { border-color: rgba(74, 158, 234, 0.45); }
+.panel.chain h3 { color: var(--accent); }
+
+.marks { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.marks li {
+  font-size: clamp(0.94rem, 1.4vw, 1.24rem);
+  line-height: 1.5;
+  color: var(--text-soft);
+  padding-left: 1.25rem;
+  position: relative;
+}
+.marks li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0.55em;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+.marks.on li::before  { background: var(--success); }
+.marks.off li::before { background: var(--text-faint); }
+
+/* --- Libro de control: la fila reglada ----------------------------------- */
+
+.ledger {
+  margin-top: clamp(1rem, 2.2vw, 1.8rem);
+  border: 1px solid var(--ink-line);
+  border-radius: 10px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: clamp(0.84rem, 1.28vw, 1.12rem);
+}
+.ledger-head, .ledger-row {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr 8.5rem 7rem;
+  gap: clamp(0.5rem, 1.2vw, 1.1rem);
+  padding: clamp(0.6rem, 1.05vw, 0.95rem) clamp(0.8rem, 1.5vw, 1.3rem);
+  align-items: center;
+}
+.ledger-head {
+  background: #101b26;
+  color: var(--text-faint);
+  font-size: 0.82em;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--ink-line);
+}
+.ledger-row { border-bottom: 1px solid var(--ink-line); color: var(--text-soft); }
+.ledger-row:last-child { border-bottom: 0; }
+.ledger-row .folio { color: var(--accent); font-weight: 700; }
+.ledger-row.rejected { background: rgba(255, 93, 98, 0.09); }
+.ledger-row.rejected .folio { color: var(--danger); }
+.ledger-row .verdict { font-weight: 700; text-align: right; }
+.ledger-row.ok .verdict { color: var(--success); }
+.ledger-row.rejected .verdict { color: var(--danger); }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- El momento del revert ----------------------------------------------- */
+
+.revert {
+  margin-top: clamp(1rem, 2vw, 1.6rem);
+  border: 1px solid var(--danger-deep);
+  background: rgba(255, 93, 98, 0.1);
+  border-radius: 10px;
+  padding: clamp(0.9rem, 1.8vw, 1.5rem) clamp(1rem, 2vw, 1.7rem);
+  overflow-x: auto;
+}
+.revert-label {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: clamp(1.05rem, 2vw, 1.7rem);
+  color: var(--danger);
+  letter-spacing: -0.015em;
+  margin: 0 0 0.45rem;
+}
+.revert code {
+  font-family: var(--mono);
+  font-size: clamp(0.8rem, 1.18vw, 1.08rem);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* --- Guion del demo (tarjeta de apunte) ---------------------------------- */
+
+.beats { counter-reset: beat; display: grid; gap: clamp(0.6rem, 1.2vw, 1rem); margin-top: clamp(1rem, 2vw, 1.6rem); }
+.beat {
+  display: grid;
+  /* Tres hijos —::before, el título y la descripción— en dos columnas: la
+     descripción cae a una segunda fila, así que se la ancla explícitamente a
+     la columna 2. Sin esto aterriza en la columna del número, de 2.3rem, y
+     se parte en una palabra por renglón. */
+  grid-template-columns: 2.3rem 1fr;
+  column-gap: clamp(0.7rem, 1.4vw, 1.2rem);
+  row-gap: 0.3rem;
+  align-items: baseline;
+  padding-bottom: clamp(0.6rem, 1.2vw, 1rem);
+  border-bottom: 1px solid var(--ink-line);
+}
+.beat:last-child { border-bottom: 0; padding-bottom: 0; }
+.beat::before {
+  counter-increment: beat;
+  content: counter(beat);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: clamp(0.82rem, 1.2vw, 1rem);
+  color: var(--accent);
+}
+.beat b { grid-column: 2; font-weight: 700; font-size: clamp(1.08rem, 1.72vw, 1.52rem); }
+.beat span { grid-column: 2; font-size: clamp(0.95rem, 1.45vw, 1.3rem); color: var(--text-soft); line-height: 1.5; max-width: 68ch; }
+
+/* --- Estado: hoy vs. sigue ----------------------------------------------- */
+
+.status-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--mono);
+  font-size: clamp(0.76rem, 1.08vw, 0.96rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+  color: var(--text);
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.dot.on  { background: var(--success); }
+.dot.off { background: var(--text-faint); }
+
+.callout {
+  margin-top: clamp(1rem, 2vw, 1.6rem);
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem clamp(0.9rem, 1.7vw, 1.4rem);
+  font-size: clamp(1.02rem, 1.56vw, 1.4rem);
+  line-height: 1.5;
+  color: var(--text);
+  max-width: 58ch;
+}
+.callout b { color: var(--accent); font-weight: 700; }
+
+/* --- Pedido -------------------------------------------------------------- */
+
+.asks { display: grid; gap: clamp(0.7rem, 1.4vw, 1.2rem); margin-top: clamp(1.2rem, 2.4vw, 2rem); counter-reset: ask; }
+.ask {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr;
+  gap: clamp(0.7rem, 1.4vw, 1.2rem);
+  align-items: baseline;
+}
+.ask::before {
+  counter-increment: ask;
+  content: counter(ask);
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--accent);
+  font-size: clamp(0.88rem, 1.3vw, 1.1rem);
+}
+.ask p { margin: 0; font-size: clamp(1.05rem, 1.68vw, 1.48rem); line-height: 1.45; }
+
+.backup-flag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: clamp(0.6rem, 0.88vw, 0.74rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--paper);
+  padding: 0.2rem 0.55rem;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.hint {
+  position: fixed;
+  right: clamp(1rem, 2vw, 1.6rem);
+  top: clamp(1rem, 2vw, 1.6rem);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  opacity: 0.5;
+  transition: opacity 0.6s ease 4s;
+}
+body.started .hint { opacity: 0; }
+
+.pdf-btn {
+  font-family: var(--mono);
+  font-size: inherit;
+  color: var(--text-soft);
+  background: transparent;
+  border: 1px solid var(--ink-line);
+  border-radius: 4px;
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.pdf-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pdf-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------------------
+ * Impresión: una diapositiva por página, en 16:9.
+ *
+ * El visor de artefactos bloquea toda descarga que la página inicie por su
+ * cuenta, así que no hay botón de blob ni librería de PDF: la ruta real es el
+ * diálogo de impresión del navegador y su "Guardar como PDF". Lo que hace que
+ * el resultado sirva es esta hoja, no el botón.
+ *
+ * Los tamaños se redeclaran fijos porque los clamp() del deck se apoyan en vw,
+ * y en impresión 1vw se resuelve contra el ancho de página: sin esto todo
+ * colapsa al mínimo del clamp y sale un PDF con letra chica.
+ * ------------------------------------------------------------------------- */
+@media print {
+  @page { size: 297mm 167mm; margin: 0; }
+
+  html, body {
+    background: var(--ink) !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .hint, .rail { display: none !important; }
+  .deck { position: static; width: auto; height: auto; }
+
+  .slide {
+    position: static !important;
+    display: flex !important;
+    width: 297mm;
+    min-height: 167mm;
+    padding: 13mm 15mm;
+    overflow: visible !important;
+    break-after: page;
+    page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  .slide > * { animation: none !important; }
+
+  /* Tamaños fijos: ver la nota sobre vw arriba. */
+  h2                { font-size: 3rem; }
+  .wordmark         { font-size: 7.5rem; }
+  .tagline          { font-size: 1.85rem; }
+  .cover-meta       { font-size: 0.92rem; }
+  .eyebrow          { font-size: 0.84rem; }
+  .lede             { font-size: 1.45rem; }
+  .panel h3         { font-size: 1.26rem; }
+  .panel p          { font-size: 1.12rem; }
+  .marks li         { font-size: 1.1rem; }
+  .beat b           { font-size: 1.36rem; }
+  .beat span        { font-size: 1.16rem; }
+  .ledger           { font-size: 1rem; }
+  .revert-label     { font-size: 1.55rem; }
+  .callout          { font-size: 1.24rem; }
+  .ask p            { font-size: 1.32rem; }
+  .status-head      { font-size: 0.88rem; }
+
+  /* El hash no puede salir cortado del papel. */
+  .revert { overflow: visible !important; }
+  .revert code { white-space: pre-wrap; word-break: break-all; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .slide[data-active="true"] > * { animation: rise 0.32s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .slide[data-active="true"] > *:nth-child(2) { animation-delay: 0.04s; }
+  .slide[data-active="true"] > *:nth-child(3) { animation-delay: 0.08s; }
+  .slide[data-active="true"] > *:nth-child(4) { animation-delay: 0.12s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+}
+
+@media (max-width: 720px) {
+  .cols-2, .cols-3 { grid-template-columns: 1fr; }
+  .ledger-head, .ledger-row { grid-template-columns: 2.4rem 1fr 5.5rem; }
+  .ledger-head span:nth-child(3), .ledger-row .when { display: none; }
+}
+</style>
+
+<div class="hint">← →&nbsp;&nbsp;·&nbsp;&nbsp;F</div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 · Portada — 0:00 -->
+  <section class="slide cover" data-time="0:00" data-budget="15 s">
+    <h1 class="wordmark">VeriMed</h1>
+    <p class="tagline">Una receta, una entrega.</p>
+    <div class="cover-meta">
+      <span>Equipo <b>FullStack</b></span>
+      <span>ETH Bolivia 2026 · Cochabamba</span>
+      <span>Track 6 · <b>Real-World Applications</b></span>
+    </div>
+  </section>
+
+  <!-- 2 · Problema — 0:15 -->
+  <section class="slide" data-time="0:15" data-budget="25 s">
+    <p class="eyebrow">El problema</p>
+    <h2>La misma receta, cinco farmacias, una mañana.</h2>
+    <p class="lede">Nadie en el mostrador puede saber si esa receta ya fue retirada en la farmacia de al lado.</p>
+    <div class="cols cols-2">
+      <div class="panel paper">
+        <h3>Bolivia ya resolvió esto en papel</h3>
+        <p>El recetario valorado del SEDES es un formulario numerado por una autoridad, de un solo uso, que la farmacia retiene y asienta en el Libro de Control.</p>
+      </div>
+      <div class="panel">
+        <h3>Y el papel se rompe donde importa</h3>
+        <p>Se fotocopia, se falsifica el sello, y la auditoría llega meses después de que el medicamento ya salió.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · Solución — 0:40 -->
+  <section class="slide" data-time="0:40" data-budget="15 s">
+    <p class="eyebrow">La garantía</p>
+    <h2>El mismo modelo de un solo uso, garantizado por el contrato y no por la promesa de nadie.</h2>
+    <div class="ledger" aria-label="Libro de control, dos asientos">
+      <div class="ledger-head"><span>N.º</span><span>Receta</span><span>Farmacia</span><span>Estado</span></div>
+      <div class="ledger-row ok">
+        <span class="folio">001</span>
+        <span class="truncate">0x8f3a…c21d</span>
+        <span class="when truncate">Bolívar</span>
+        <span class="verdict">Entregada</span>
+      </div>
+      <div class="ledger-row rejected">
+        <span class="folio">001</span>
+        <span class="truncate">0x8f3a…c21d</span>
+        <span class="when truncate">San Jorge</span>
+        <span class="verdict">Rechazada</span>
+      </div>
+    </div>
+    <p class="lede">El segundo asiento no lo rechaza un auditor tres meses después. Lo rechaza el contrato, en el mostrador, en segundos.</p>
+  </section>
+
+  <!-- 4 · Demo — 0:55 (80 s, la mitad del pitch) -->
+  <section class="slide" data-time="0:55" data-budget="80 s · la mitad del pitch">
+    <p class="eyebrow">Demo en vivo</p>
+    <h2>Emitir, entregar, y que la segunda vez falle.</h2>
+    <div class="beats">
+      <div class="beat"><b>La médica emite</b><span>Firma la receta y sale un QR. Cero datos del paciente en claro.</span></div>
+      <div class="beat"><b>Farmacia Bolívar entrega</b><span>Escanea, el contrato verifica su credencial contra EAS, y registra la entrega.</span></div>
+      <div class="beat"><b>Farmacia San Jorge lo intenta</b><span>El mismo QR, otra farmacia, treinta segundos después.</span></div>
+    </div>
+    <div class="revert">
+      <p class="revert-label">Rechazada — ya fue entregada</p>
+      <code>AlreadyDispensed(contentHash: 0x8f3a…c21d, dispensedBy: 0x7a8b…3f9c, dispensedAt: 12/09/2026 09:42:15)</code>
+    </div>
+  </section>
+
+  <!-- 5 · Arquitectura — 2:15 -->
+  <section class="slide" data-time="2:15" data-budget="25 s">
+    <p class="eyebrow">Arquitectura · tres cajas</p>
+    <h2>El dato clínico nunca toca la cadena.</h2>
+    <div class="cols cols-3">
+      <div class="panel">
+        <h3>Off-chain, cifrado</h3>
+        <p>El tratamiento viaja cifrado con AES-256-GCM. Sólo quien tiene el QR lo puede leer.</p>
+      </div>
+      <div class="panel chain">
+        <h3>On-chain</h3>
+        <p>Un hash, un compromiso con sal única por receta, dos direcciones y dos fechas. Ningún identificador de paciente, en ninguna forma.</p>
+      </div>
+      <div class="panel chain">
+        <h3>Credenciales</h3>
+        <p>Attestations en EAS. El contrato las relee en cada entrega: revocar una licencia corta el acceso al instante, sin administrador.</p>
+      </div>
+    </div>
+    <p class="callout">La sal es única por receta, así que <b>ni nosotros mismos</b> podemos agrupar las recetas de una persona. Es el objetivo del diseño, no un efecto secundario.</p>
+  </section>
+
+  <!-- 6 · Honestidad — 2:40 -->
+  <section class="slide" data-time="2:40" data-budget="15 s">
+    <p class="eyebrow">Qué funciona hoy, qué sigue</p>
+    <h2>Lo decimos antes de que lo pregunten.</h2>
+    <div class="cols cols-2">
+      <div class="panel">
+        <div class="status-head"><span class="dot on"></span> Funciona hoy</div>
+        <ul class="marks on">
+          <li>Contrato inmutable, sin administrador y sin función de reapertura</li>
+          <li>Segunda entrega rechazada, con quién y cuándo</li>
+          <li>Credencial verificada en cada entrega; revocación inmediata</li>
+          <li>Cifrado de extremo a extremo y cero identificadores en cadena</li>
+          <li>Firma EIP-712 de datos legibles, no de un hash hexadecimal</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="status-head"><span class="dot off"></span> Todavía no</div>
+        <ul class="marks off">
+          <li>Abstracción de cuenta y paymaster: diseñada, no construida</li>
+          <li>Firma con passkey biométrica: el puerto está listo, la firma no</li>
+          <li>Firma ADSIB: hoy figura como <em>pendiente de integración</em>, nunca simulada como válida</li>
+          <li>Sustancias controladas: exigen el formulario del SEDES y se co-diseñan con ellos</li>
+          <li>Tratamiento crónico y entrega fraccionada</li>
+        </ul>
+      </div>
+    </div>
+    <p class="callout">No sustituimos el recetario valorado por decreto propio. Somos <b>una capa de trazabilidad complementaria</b>, y ese es el único camino legal que existe hoy.</p>
+  </section>
+
+  <!-- 7 · Pedido — 2:55 -->
+  <section class="slide" data-time="2:55" data-budget="20 s">
+    <p class="eyebrow">Equipo FullStack · el pedido</p>
+    <h2>Tres contactos, y arrancamos el piloto.</h2>
+    <div class="asks">
+      <div class="ask"><p>El Departamento Regional de Farmacia del <b>SEDES Cochabamba</b>.</p></div>
+      <div class="ask"><p>El <b>Colegio Médico</b>, para que sea quien emita las credenciales y no nosotros.</p></div>
+      <div class="ask"><p>Una <b>clínica y una farmacia</b> dispuestas a un circuito cerrado.</p></div>
+    </div>
+    <p class="callout">Código abierto, contrato verificable en cadena, y una documentación que dice en voz alta lo que todavía no hace.</p>
+  </section>
+
+  <!-- B1 -->
+  <section class="slide" data-time="Q&amp;A" data-budget="respaldo">
+    <p class="eyebrow"><span class="backup-flag">Respaldo</span></p>
+    <h2>¿Por qué no una base de datos con firma digital?</h2>
+    <div class="cols cols-3">
+      <div class="panel">
+        <h3>La firma da autoría, no unicidad</h3>
+        <p>ADSIB prueba quién firmó. No impide que la misma receta se cobre en dos farmacias que no comparten base.</p>
+      </div>
+      <div class="panel">
+        <h3>Nadie quiere ser el dueño del servidor</h3>
+        <p>Farmacias que compiten entre sí no van a escribir en la base de datos de una de ellas. La cadena es el libro neutral.</p>
+      </div>
+      <div class="panel">
+        <h3>Son complementarias</h3>
+        <p>La firma legal la aporta ADSIB. La unicidad la aporta el contrato. No es una alternativa, es la otra mitad.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- B2 -->
+  <section class="slide" data-time="Q&amp;A" data-budget="respaldo">
+    <p class="eyebrow"><span class="backup-flag">Respaldo</span></p>
+    <h2>Ley 913: por qué no reemplazamos el formulario mañana.</h2>
+    <div class="cols cols-2">
+      <div class="panel paper">
+        <h3>Lo que dice la norma</h3>
+        <p>Los estupefacientes van en receta valorada del SEDES y los psicotrópicos en receta archivada, con asiento en libro. Ese formulario numerado <em>es</em> el mecanismo de control, no un trámite alrededor de él.</p>
+      </div>
+      <div class="panel chain">
+        <h3>Lo que hacemos con eso</h3>
+        <p>Un médico que recete fuera del formulario oficial queda expuesto personalmente. Por eso el piloto corre como capa complementaria, y el camino a sustituirlo se co-diseña con el SEDES o no existe.</p>
+      </div>
+    </div>
+    <p class="callout">Ese es el argumento más fuerte del proyecto: Bolivia <b>ya cree</b> en la receta de un solo uso. Nosotros le damos una garantía técnica en lugar de una promesa administrativa.</p>
+  </section>
+
+  <!-- B3 -->
+  <section class="slide" data-time="Q&amp;A" data-budget="respaldo">
+    <p class="eyebrow"><span class="backup-flag">Respaldo</span></p>
+    <h2>Lo que este sistema no puede hacer.</h2>
+    <div class="cols cols-2">
+      <div class="panel">
+        <h3>No detecta al médico corrupto</h3>
+        <p>Una receta firmada por un médico con credencial vigente es válida para el contrato. La cadena registra el fraude con fidelidad; no lo impide.</p>
+      </div>
+      <div class="panel">
+        <h3>El grafo de transacciones es público</h3>
+        <p>El contenido va cifrado, pero quién emite y quién entrega es observable. Es el riesgo de privacidad más real del diseño y está documentado como tal.</p>
+      </div>
+    </div>
+    <p class="callout">Si no lo sabemos, lo decimos. <b>Es la regla del equipo</b>, y es también la razón por la que se puede confiar en el resto de lo que afirmamos.</p>
+  </section>
+
+</div>
+
+<div class="rail">
+  <span id="rail-time"><strong>0:00</strong></span>
+  <span class="rail-track"><span class="rail-fill" id="rail-fill" style="width:0%"></span></span>
+  <span id="rail-budget">15 s</span>
+  <span id="rail-count">1 / 10</span>
+  <button type="button" class="pdf-btn" id="pdf-btn">Guardar PDF</button>
+</div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var fill = document.getElementById('rail-fill');
+  var time = document.getElementById('rail-time');
+  var budget = document.getElementById('rail-budget');
+  var count = document.getElementById('rail-count');
+  var i = 0;
+
+  function show(next) {
+    i = Math.max(0, Math.min(slides.length - 1, next));
+    slides.forEach(function (s, n) { s.setAttribute('data-active', String(n === i)); });
+    var s = slides[i];
+    time.innerHTML = '<strong>' + s.getAttribute('data-time') + '</strong>';
+    budget.textContent = s.getAttribute('data-budget');
+    count.textContent = (i + 1) + ' / ' + slides.length;
+    // El riel mide los 7 del guion; los de respaldo quedan al tope.
+    fill.style.width = Math.min(100, (i / 6) * 100) + '%';
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(i + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(i - 1); }
+    else if (e.key === 'Home') { show(0); }
+    else if (e.key === 'End') { show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) { document.exitFullscreen(); }
+      else if (document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen(); }
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('a')) return;
+    show(i + (e.clientX < window.innerWidth * 0.28 ? -1 : 1));
+  });
+
+  document.getElementById('pdf-btn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    window.print();
+  });
+
+  show(0);
+  // La ayuda se apaga sola: nadie quiere verla proyectada durante el pitch.
+  requestAnimationFrame(function () { document.body.classList.add('started'); });
+})();
+</script>

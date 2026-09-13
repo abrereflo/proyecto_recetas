@@ -18,18 +18,6 @@ export interface Eip712Domain {
   verifyingContract?: string;
 }
 
-/**
- * Domain separator for the integration network.
- *
- * `verifyingContract` is added at runtime once PrescriptionRegistry is deployed;
- * use `prescriptionDomain()` rather than this constant when signing.
- */
-export const PRESCRIPTION_EIP712_DOMAIN = {
-  name: EIP712_DOMAIN_NAME,
-  version: EIP712_DOMAIN_VERSION,
-  chainId: FUJI_CHAIN_ID,
-} as const satisfies Eip712Domain;
-
 /** Build the domain for a concrete deployment. */
 export function prescriptionDomain(
   verifyingContract: string,

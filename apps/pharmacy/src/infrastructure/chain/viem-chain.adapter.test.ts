@@ -49,10 +49,29 @@ function adapterWith(status: 'success' | 'reverted') {
   const getProvider = () => ({ request: vi.fn().mockResolvedValue(TX_HASH) }) as never;
 
   return {
-    adapter: createViemChainAdapter({ config: CONFIG, publicClient, getProvider }),
+    adapter: createViemChainAdapter({ config: CONFIG, publicClient, signer: { getProvider } }),
     publicClient,
   };
 }
+
+/**
+ * Corte 2 (docs/21-acceso-para-la-demo.md): the chain adapter used to import
+ * `injectedProvider` and reach for `window.ethereum` on its own, so a
+ * different signer implementation (the passkey swap of D-04) would never be
+ * used by the one call that actually signs. This pins the fix: the adapter
+ * resolves its provider through `SignerPort` alone, even with no injected
+ * provider at all.
+ */
+describe('the write path resolves its provider through SignerPort, not window.ethereum', () => {
+  it('dispenses using the stub the port supplies, with no injected provider present', async () => {
+    expect(globalThis.window?.ethereum).toBeUndefined();
+
+    const { adapter } = adapterWith('success');
+    const receipt = await adapter.dispense(CONTENT_HASH, PHARMACY);
+
+    expect(receipt.transactionHash).toBe(TX_HASH);
+  });
+});
 
 describe('viem chain adapter — dispense', () => {
   it('returns the receipt when the transaction succeeded', async () => {

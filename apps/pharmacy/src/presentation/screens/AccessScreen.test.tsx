@@ -20,6 +20,7 @@ function fakeSigner(overrides: Partial<SignerPort> = {}): SignerPort {
     connect: async () => PHARMACY_A,
     getChainId: async () => CHAIN_ID,
     ensureChain: async () => undefined,
+    getProvider: () => undefined,
     ...overrides,
   };
 }

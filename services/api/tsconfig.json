@@ -2,7 +2,15 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "lib": ["ES2022"],
+    // `DOM` is here for its TYPES, not because anything renders. `@recetas/chain`
+    // re-exports the envelope helpers, which pull in `@recetas/crypto`, whose
+    // `webcrypto()` is typed with the standard `Crypto` and `CryptoKey`
+    // interfaces — WebCrypto is the same API in Node 22 and in a browser, and
+    // those two names live in `lib.dom.d.ts`. Narrowing to `ES2022` alone made
+    // this project fail to typecheck the moment it consumed a shared package
+    // that a browser also consumes. `types: ["node"]` below still keeps the
+    // Node globals as the ambient ones.
+    "lib": ["ES2022", "DOM"],
     "types": ["node"]
   },
   "include": ["src/**/*.ts"]
