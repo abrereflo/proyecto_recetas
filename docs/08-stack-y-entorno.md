@@ -1,6 +1,6 @@
 # 08 — Stack y entorno
 
-Foundry para los contratos, Avalanche Fuji como red, un proveedor de infraestructura ERC-4337 para bundler y paymaster, React para las dos aplicaciones y Postgres para el payload cifrado. La regla que gobierna cada elección es la misma: si no se puede montar y demostrar en setenta y dos horas, no entra.
+Foundry para los contratos, Avalanche Fuji como red, React para las dos aplicaciones y Postgres para el payload cifrado. La abstracción de cuenta ERC-4337 (bundler, paymaster y passkeys) está elegida pero todavía no implementada: hoy las dos aplicaciones firman con una wallet inyectada EIP-1193 (`eip1193-signer.adapter.ts`), no con una smart account. La regla que gobierna cada elección es la misma: si no se puede montar y demostrar en setenta y dos horas, no entra.
 
 ## Stack recomendado
 
@@ -9,11 +9,11 @@ Foundry para los contratos, Avalanche Fuji como red, un proveedor de infraestruc
 | Red | Avalanche Fuji (chainId 43113) | Base Sepolia, Arbitrum Sepolia, Scroll Sepolia | Cadena EVM pública con RIP-7212 comprobado en vivo. Es una L1 independiente, no una L2 de Ethereum: ver la tabla de decisión de [01](01-arquitectura.md) |
 | Contratos | Solidity 0.8.x | — | Estándar del EVM |
 | Tooling de contratos | **Foundry** | Hardhat | `forge test` es rápido, el fuzzing viene incluido y las pruebas se escriben en Solidity, sin cambiar de lenguaje |
-| Cuenta | Smart account ERC-4337 con verificación P-256 | EIP-7702 | El médico no tiene wallet previa; 4337 no la exige |
-| Bundler y paymaster | Proveedor de infraestructura de account abstraction | Bundler propio | Montar un bundler propio consume el buildathon entero |
+| Cuenta | Smart account ERC-4337 con verificación P-256 — **elegido, no implementado**: hoy se firma con una wallet inyectada EIP-1193 | EIP-7702 | El médico no tiene wallet previa; 4337 no la exige |
+| Bundler y paymaster | Proveedor de infraestructura de account abstraction — **elegido, no implementado** | Bundler propio | Montar un bundler propio consume el buildathon entero |
 | Credenciales | EAS v1.2.0 **desplegado por el propio proyecto** | Registro propio en Solidity | Avalanche no tiene despliegue oficial de EAS, así que lo desplegamos nosotros. Aun así gana al registro propio: esquema tipado, revocación y herramientas que ya existen, sin escribir contrato nuevo |
 | Frontend | React con TypeScript y Vite | Next.js | Dos SPA sencillas; no necesitamos renderizado en servidor |
-| Firma del usuario | WebAuthn del navegador (passkeys) | Wallet de extensión | Ningún médico instalará una extensión |
+| Firma del usuario | WebAuthn del navegador (passkeys) — **elegido, no implementado**: hoy firma con `window.ethereum` a través de `eip1193-signer.adapter.ts` | Wallet de extensión | Ningún médico instalará una extensión |
 | QR | Biblioteca de generación y lectura en el navegador | App nativa | La cámara del navegador basta |
 | Backend | Node con TypeScript | Go, Python | Comparte tipos con el frontend y acelera el desarrollo |
 | Almacenamiento del payload | Postgres | IPFS (Kubo), almacenamiento de objetos | Ver [D-08](05-almacenamiento-y-cifrado.md) |
@@ -41,8 +41,7 @@ Foundry para los contratos, Avalanche Fuji como red, un proveedor de infraestruc
 proyecto_recetas/
 ├─ contracts/                # Foundry project
 │  ├─ src/
-│  │  ├─ PrescriptionRegistry.sol
-│  │  └─ PrescriptionPaymaster.sol
+│  │  └─ PrescriptionRegistry.sol
 │  ├─ test/
 │  │  ├─ PrescriptionRegistry.t.sol
 │  │  └─ invariants/
@@ -62,6 +61,8 @@ proyecto_recetas/
 │  └─ shared/                # shared types, EIP-712 domain
 └─ docs/
 ```
+
+> `PrescriptionPaymaster.sol` no está en el árbol de arriba porque no existe todavía: el paymaster y el bundler son una decisión tomada (ver la tabla de arriba), no un contrato construido.
 
 ## Entornos
 

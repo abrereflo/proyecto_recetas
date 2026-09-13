@@ -1,4 +1,4 @@
-# Receta electrónica verificable sobre Ethereum — documentación del proyecto
+# Receta electrónica verificable sobre Avalanche — documentación del proyecto
 
 Un médico firma una receta sin saber qué es una wallet y sin pagar gas; la farmacia la verifica escaneando un QR; el segundo intento de dispensar esa misma receta es rechazado por el contrato. Eso es lo que construimos y lo que se demuestra. Corre sobre **Avalanche Fuji**, la testnet pública de la C-Chain de Avalanche —una L1 EVM independiente, no un L2 de Ethereum—, con abstracción de cuenta, paymaster y credenciales profesionales emitidas como attestations.
 

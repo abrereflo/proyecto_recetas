@@ -6,8 +6,8 @@ La autorización se resuelve con una pregunta: ¿esta dirección tiene una attes
 
 | Actor | Identidad técnica | Acreditado por | Puede |
 |---|---|---|---|
-| Médico | Smart account ERC-4337 con passkey | Attestation `PractitionerCredential` | Firmar recetas (EIP-712, off-chain) |
-| Farmacia | Smart account ERC-4337 | Attestation `PharmacyCredential` | Enviar la transacción de dispensación |
+| Médico | Wallet EIP-1193; smart account ERC-4337 con passkey como objetivo ([D-04](#d-04)) | Attestation `PractitionerCredential` | Firmar recetas (EIP-712, off-chain) |
+| Farmacia | Wallet EIP-1193; smart account ERC-4337 como objetivo ([D-04](#d-04)) | Attestation `PharmacyCredential` | Enviar la transacción de dispensación |
 | Paciente | Ninguna en el MVP | No aplica | Recibir y presentar el QR |
 | Emisor de credenciales | Cuenta multifirma | Constitución del piloto | Emitir y revocar attestations |
 | Operador del paymaster | Cuenta de servicio | Equipo del proyecto | Definir y financiar la política de patrocinio |

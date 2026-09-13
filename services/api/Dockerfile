@@ -13,7 +13,9 @@ COPY packages/crypto/package.json ./packages/crypto/
 COPY packages/rules/package.json ./packages/rules/
 COPY services/api/package.json ./services/api/
 
-# No lockfile is committed yet; the first install writes one.
+# pnpm-lock.yaml is committed at the repo root; --no-frozen-lockfile stays
+# here because this partial COPY (manifests only, no lockfile) would
+# otherwise fail pnpm's frozen-lockfile check.
 RUN pnpm install --no-frozen-lockfile
 
 COPY packages ./packages

@@ -8,7 +8,7 @@ Diez preguntas que van a caer, con la respuesta corta que hay que tener ensayada
 
 ### 1. ¿Qué construyeron en tres días?
 
-Un contrato desplegado en Avalanche Fuji con dos funciones, `issue` y `dispense`, más dos aplicaciones web: el médico firma con su huella y genera un QR, la farmacia lo escanea y dispensa. Las credenciales de médicos y farmacias son attestations en EAS, con revocación. El segundo intento de dispensar la misma receta revierte, y eso lo pueden ver en vivo. → [09](09-roadmap.md)
+Un contrato desplegado en Avalanche Fuji con dos funciones, `issue` y `dispense`, más dos aplicaciones web: el médico firma una estructura EIP-712 legible con la wallet conectada en el navegador y genera un QR, la farmacia lo escanea y dispensa. Las credenciales de médicos y farmacias son attestations en EAS, con revocación. El segundo intento de dispensar la misma receta revierte, y eso lo pueden ver en vivo. → [09](09-roadmap.md)
 
 ### 2. ¿Por qué blockchain y no una base de datos con firma ADSIB?
 
@@ -16,7 +16,7 @@ Una base de datos con firma ADSIB resuelve la autenticidad pero no la unicidad e
 
 ### 3. ¿Quién paga el gas y cómo firma un médico que no sabe qué es una wallet?
 
-El médico firma con la huella de su teléfono: es una passkey, la misma tecnología con la que desbloquea el banco, y no hay frase semilla ni extensión. El gas lo paga un paymaster que patrocina solo a cuentas con credencial profesional vigente y solo para llamadas a nuestro contrato. En producción lo financiaría la clínica o la caja de salud; el coste por receta en esta red es bajo, pero es un número que vamos a medir, no a estimar. → [01](01-arquitectura.md)
+Hoy el médico firma con la wallet conectada en el navegador: una estructura EIP-712 legible, no una cadena hexadecimal, y esa cuenta paga el gas de la emisión con AVAX de prueba. El objetivo del piloto —todavía no construido— es que firme con la huella de su teléfono, una passkey, y que un paymaster patrocine ese gas solo para cuentas con credencial profesional vigente. En producción lo financiaría la clínica o la caja de salud; el coste por receta en esta red es bajo, pero es un número que vamos a medir, no a estimar. → [01](01-arquitectura.md)
 
 ### 4. Si la receta se cifra con la clave del paciente, ¿cómo la lee la farmacia?
 
@@ -56,7 +56,7 @@ Lo vamos a medir en el buildathon y les damos el número real, no una estimació
 | "¿Cumple con la ley boliviana?" | Afirmarlo | "El diseño contempla la doble firma con ADSIB, que es lo que le daría validez legal. Todavía no está implementada y necesitamos asesoría legal local" |
 | "¿Y la ley de protección de datos?" | Inventar una | "Hasta donde hemos podido verificar, Bolivia no tiene una ley general de protección de datos; existe la vía constitucional del artículo 130. Adoptamos minimización y cifrado por decisión propia, no por obligación" |
 | "¿Tienen datos del problema en Bolivia?" | Inventar una cifra | "No. Nuestra fuente es investigación argelina y literatura estadounidense. Validar el problema en Cochabamba con entrevistas es nuestro siguiente paso, y preferimos decirlo" |
-| "¿Por qué no Solana o Hyperledger?" | Descalificar otras cadenas | "Elegimos EVM por el tooling de abstracción de cuenta y passkeys, y dentro de EVM la C-Chain de Avalanche porque tiene el precompilado RIP-7212 de verificación P-256 y lo comprobamos nosotros. Eso es lo que permite que el médico firme con la huella y no toque una wallet. Es la razón concreta, no una preferencia de ecosistema" |
+| "¿Por qué no Solana o Hyperledger?" | Descalificar otras cadenas | "Elegimos EVM por el tooling de abstracción de cuenta y passkeys, y dentro de EVM la C-Chain de Avalanche porque tiene el precompilado RIP-7212 de verificación P-256 y lo comprobamos nosotros. Ese precompilado es lo que hará posible que el médico firme con la huella y no toque una wallet; hoy todavía firma con una wallet en el navegador. Es la razón concreta, no una preferencia de ecosistema" |
 | "¿Escala a todo el país?" | Decir que sí | "No lo hemos medido. La C-Chain procesa este volumen sin problema en teoría, pero no hemos hecho pruebas de carga y no vamos a afirmarlo" |
 | "¿Trazan el medicamento desde el laboratorio?" | Decir que sí con ATC | "No. ATC clasifica fármacos, no rastrea unidades; para eso hace falta serialización GS1. Es un producto distinto y lo dejamos fuera a propósito" |
 | "¿Sirve para estupefacientes y psicotrópicos, que es donde está el problema?" | Decir que sí | "Todavía no, y es deliberado. Hoy se controlan con el formulario valorado que emite el SEDES y que la farmacia retiene: el papel numerado **es** el control, y sustituirlo requiere autorización, no una decisión nuestra. Los excluimos del piloto. Pero ese recetario es justamente nuestro modelo en papel: uso único, numerado por autoridad, retenido como prueba" |

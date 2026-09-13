@@ -4,7 +4,7 @@ Construimos una receta electrónica que no se puede usar dos veces. El médico l
 
 ## La frase de una línea
 
-> Una receta médica que la farmacia puede verificar en segundos y que el sistema impide reutilizar, sobre Ethereum, sin que el médico tenga que saber qué es una wallet.
+> Una receta médica que la farmacia puede verificar en segundos y que el sistema impide reutilizar, sobre Avalanche con los estándares de firma de Ethereum, con el objetivo de que el médico nunca tenga que saber qué es una wallet.
 
 ## El problema
 
@@ -61,7 +61,7 @@ El informe base se apoya en investigación del Laboratorio LIRE (Universidad de 
 |---|---|
 | Contrato `PrescriptionRegistry` en Avalanche Fuji | `issue(bytes32 contentHash, bytes32 patientCommitment, uint64 expiresAt)` y `dispense(bytes32 contentHash)` de un solo uso |
 | Credenciales profesionales | Attestations EAS para médicos y farmacias, con revocación |
-| Aplicación del médico | Smart account ERC-4337, paymaster que patrocina el gas, firma EIP-712, generación de QR |
+| Aplicación del médico | Firma EIP-712 con una wallet EIP-1193, generación de QR. La smart account y el paymaster son el paso siguiente, no entran en el MVP (ver [D-04](02-roles-y-permisos.md#d-04)) |
 | Aplicación de la farmacia | Escaneo de QR, verificación on-chain, envío de la transacción de dispensación |
 | Paciente | Recibe el QR. Sin wallet, sin cuenta, sin instalación |
 | Almacenamiento off-chain | Receta cifrada fuera de la cadena; solo el hash va on-chain |
@@ -76,7 +76,7 @@ sequenceDiagram
     participant F as Farmacia
     participant SC as PrescriptionRegistry (Avalanche Fuji)
 
-    M->>M: Firma la receta con passkey (EIP-712)
+    M->>M: Firma la receta (EIP-712)
     M->>P: Entrega el QR
     P->>F: Presenta el QR
     F->>SC: dispense(contentHash)
@@ -114,15 +114,15 @@ Metas de diseño propuestas por este documento, no resultados medidos.
 |---|---|---|
 | Verificación en mostrador | Tiempo desde escaneo hasta veredicto | `SUPUESTO:` por debajo de 5 s en Avalanche Fuji; se mide durante el desarrollo |
 | Antirreutilización | Dispensaciones que exceden lo autorizado | 0, garantizado por el contrato |
-| Fricción para el médico | AVAX que necesita comprar; extensiones que debe instalar | Cero y cero |
+| Fricción para el médico | AVAX que necesita comprar; extensiones que debe instalar | Objetivo: cero y cero. Hoy todavía hace falta una wallet en el navegador |
 | Privacidad | Identificadores de paciente visibles on-chain | Ninguno, en ninguna forma |
-| Coste por receta | Gas pagado por el médico | Cero: lo cubre el paymaster |
+| Coste por receta | Gas pagado por el médico | Objetivo: cero, cubierto por el paymaster. Hoy lo paga la cuenta conectada |
 
 ## Propuesta de valor por actor
 
 | Actor | Qué gana | Qué cede |
 |---|---|---|
-| Médico | Firma sin talonario, sin wallet y sin gas; deja prueba de autoría | Su credencial profesional queda registrada como attestation |
+| Médico | Firma sin talonario y deja prueba de autoría. Firmar sin wallet y sin gas es el objetivo, no lo que hace hoy | Su credencial profesional queda registrada como attestation |
 | Farmacia | Verifica autenticidad y unicidad en segundos | Debe conectarse al sistema y enviar una transacción |
 | Paciente | Receta legible que no se puede duplicar a su nombre | Nada: no instala nada ni gestiona claves en el MVP |
 | Autoridad sanitaria | Base para vigilancia de sustancias controladas | Debe asumir el rol de emisor de credenciales. Ver [D-03](02-roles-y-permisos.md) |

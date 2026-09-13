@@ -28,13 +28,13 @@ Contar una escena, no un dato: un paciente llega a una farmacia con una receta e
 
 ### 2. Solución en una frase (15 s)
 
-> Una receta médica que la farmacia verifica escaneando un QR y que el sistema impide usar dos veces, sobre Ethereum, sin que el médico tenga que saber qué es una wallet.
+> Una receta médica que la farmacia puede verificar en segundos y que el sistema impide reutilizar, sobre Avalanche con los estándares de firma de Ethereum, con el objetivo de que el médico nunca tenga que saber qué es una wallet.
 
 ### 3. Demo (80 s)
 
 ```mermaid
 flowchart LR
-    A["Médico firma<br/>con huella"] --> B["QR generado"]
+    A["Médico firma<br/>con su wallet"] --> B["QR generado"]
     B --> C["Farmacia escanea<br/>y verifica on-chain"]
     C --> D["Dispensa"]
     D --> E["Segundo escaneo:<br/>RECHAZADO"]
@@ -43,9 +43,9 @@ flowchart LR
 
 | Momento | Qué se muestra | Qué se dice |
 |---|---|---|
-| 0-20 s | El médico completa la receta y confirma con huella | "Sin extensión, sin frase semilla, sin comprar AVAX" |
+| 0-20 s | El médico completa la receta y la firma | "Firma datos que lee en pantalla, no un hash" |
 | 20-35 s | Aparece el QR | "Esto es lo único que el paciente se lleva" |
-| 35-55 s | La farmacia escanea, ve la receta, dispensa | "La farmacia acaba de comprobar contra Ethereum que quien firmó tiene matrícula vigente" |
+| 35-55 s | La farmacia escanea, ve la receta, dispensa | "La farmacia acaba de comprobar contra la cadena que quien firmó tiene matrícula vigente" |
 | 55-70 s | Segundo escaneo del mismo QR | **"Rechazada. Ya fue dispensada hace treinta segundos."** Pausa |
 | 70-80 s | Explorador de bloques con las dos transacciones | "Esto no lo decimos nosotros: está en la cadena y cualquiera lo puede verificar" |
 
@@ -67,8 +67,8 @@ Cuatro nombres, una frase cada uno. Este bloque es el que separa un proyecto de 
 
 | Pieza | La frase |
 |---|---|
-| ERC-4337 y paymaster | "El médico nunca compra AVAX: un paymaster patrocina solo a cuentas con credencial vigente" |
-| Passkeys y RIP-7212 | "Firma con la huella del teléfono; la cadena verifica esa curva de forma nativa, con el precompilado que ya comprobamos en Fuji" |
+| ERC-4337 y paymaster | "Diseñado, todavía no construido: un paymaster patrocinará solo a cuentas con credencial vigente, para que el médico nunca compre AVAX" |
+| Passkeys y RIP-7212 | "El precompilado que verifica esa curva ya lo comprobamos en Fuji; la firma con huella se apoya en él y es lo que sigue" |
 | EIP-712 | "Firma datos legibles off-chain: ve en texto claro qué prescribe y hasta cuándo, no una cadena hexadecimal" |
 | EAS | "La matrícula es una attestation revocable: si la pierde, deja de emitir al instante" |
 

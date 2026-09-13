@@ -1,7 +1,7 @@
 # proyecto_recetas
 Blockchain Solutions for Secure E-Prescription Systems
 
-A verifiable e-prescription system built on Avalanche Fuji (chainId 43113), the testnet of Avalanche's EVM-compatible C-Chain. Avalanche is an independent L1, not an Ethereum L2; what the project borrows from Ethereum are its standards, which run on any EVM. Doctors sign prescriptions with a passkey — no wallet, no seed phrase, no AVAX — thanks to ERC-4337 smart accounts and a sponsoring paymaster. Pharmacies scan a QR code, verify the prescriber's credential on-chain through the Ethereum Attestation Service, and dispense. A second attempt to dispense the same prescription reverts. Clinical content stays encrypted off-chain; only a content hash and a per-prescription salted commitment go on-chain.
+A verifiable e-prescription system built on Avalanche Fuji (chainId 43113), the testnet of Avalanche's EVM-compatible C-Chain. Avalanche is an independent L1, not an Ethereum L2; what the project borrows from Ethereum are its standards, which run on any EVM. Doctors sign prescriptions with a wallet connected in the browser. Signing with a passkey over an ERC-4337 smart account, with a paymaster covering gas, is the designed next step and is not built yet. Pharmacies scan a QR code, verify the prescriber's credential on-chain through the Ethereum Attestation Service, and dispense. A second attempt to dispense the same prescription reverts. Clinical content stays encrypted off-chain; only a content hash and a per-prescription salted commitment go on-chain.
 
 Built for an Ethereum buildathon in Cochabamba, Bolivia.
 
