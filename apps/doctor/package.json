@@ -19,6 +19,7 @@
     "@recetas/crypto": "workspace:*",
     "@recetas/rules": "workspace:*",
     "@recetas/shared": "workspace:*",
+    "@simplewebauthn/browser": "14.0.0",
     "qrcode": "1.5.4",
     "react": "19.0.0",
     "react-dom": "19.0.0",
