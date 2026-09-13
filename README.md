@@ -15,7 +15,7 @@ Deployed and source-verified on **Avalanche Fuji, chainId 43113**, on 13 Septemb
 
 | Contract / value | Address or uid |
 |---|---|
-| `PrescriptionRegistry` | [`0xD5F2d5aD03703a9Ee11078d86181421E2E078365`](https://testnet.snowscan.xyz/address/0xd5f2d5ad03703a9ee11078d86181421e2e078365) — verified |
+| `PrescriptionRegistry` | [`0xD5F2d5aD03703a9Ee11078d86181421E2E078365`](https://testnet.snowtrace.io/address/0xd5f2d5ad03703a9ee11078d86181421e2e078365) — verified |
 | `EAS` v1.2.0 (this project's own) | `0x27781D2242a68e4D234bc0A5a15333D0CD80c58A` |
 | `SchemaRegistry` | `0xD4aFA6F68be2eb0c99D3B421B7f52a6420217efb` |
 | `PRACTITIONER_SCHEMA_UID` | `0x5b8d9aff12e1409f3603c9bcca659c1e1dc8d8b4faf219b674d743f6ec54f233` |
