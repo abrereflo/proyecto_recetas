@@ -15,8 +15,8 @@ El modelo objetivo se descarta para esta demo por cuatro obstáculos concretos, 
 | # | Obstáculo | Evidencia |
 |---|---|---|
 | 1 | La disponibilidad de bundler y paymaster ERC-4337 en Fuji **no está comprobada**. El documento de arquitectura lo marca como pendiente en su propio bloque de coste honesto | `docs/01-arquitectura.md:17` — `VERIFICAR:` disponibilidad y condiciones de un proveedor de bundler y paymaster ERC-4337 en Fuji |
-| 2 | No hay puntos de acceso configurados. Las dos variables existen vacías, con el motivo escrito al lado | `env.example:84-89` — `BUNDLER_RPC_URL=` y `PAYMASTER_RPC_URL=` bajo un `TODO` |
-| 3 | `permissionless.js` **no está instalado**, y su ausencia es deliberada, no un olvido | `README.md:205`; `env.example:85-86` |
+| 2 | No hay punto de acceso de bundler, y ya no hay ni variable para uno. `BUNDLER_RPC_URL` y `PAYMASTER_RPC_URL` se borraron al entrar el relayer propio, porque declarar una variable para algo que el proyecto decidió no usar es una contradicción | `env.example`, bloque `ERC-4337`; `services/api/src/relayer/` |
+| 3 | `permissionless.js` **no está instalado**, y su ausencia es deliberada, no un olvido | `README.md`; `env.example`, bloque `ERC-4337` |
 | 4 | [D-02](01-arquitectura.md) —quién financia el paymaster— sigue abierta, y con ella la política de patrocinio | `docs/01-arquitectura.md:150-154`; `docs/18-tareas-por-fases.md:110`, tarea «Financiar el paymaster» sin marcar |
 
 La Fase 5 de [18](18-tareas-por-fases.md) agrupa ese trabajo en ocho tareas, todas abiertas, con criterio de salida «una emisión completa sin que el médico posea AVAX» (`docs/18-tareas-por-fases.md:100-113`). Ese criterio no se alcanza a tiempo para la demo, y forzarlo pondría en riesgo lo único que la demo tiene que demostrar: que el segundo intento de dispensar revierte.
@@ -158,7 +158,7 @@ Tres frases, sin adorno. Si el jurado repregunta por el plazo o por la condició
 | `SetupCredentials.s.sol` es exclusivo de Anvil y desaconseja su extensión a red pública | Lectura de `contracts/script/SetupCredentials.s.sol:18-22,31-33,109-129` |
 | La attestation se emite sin ningún campo del esquema | `MockEAS.attest` no tiene parámetro de datos (`contracts/test/mocks/MockEAS.sol:41-51`), frente a `bytes data` en `contracts/src/IEAS.sol:23` y los campos declarados en `contracts/script/RegisterSchemas.s.sol:39,43` |
 | La aplicación del médico no es PWA y la de farmacia sí, hecha a mano | `apps/doctor/public` vacío y sin manifiesto en `apps/doctor/index.html`; `apps/pharmacy/public/{manifest.webmanifest,sw.js,icon.svg}`, `apps/pharmacy/index.html:8` y `apps/pharmacy/src/registerServiceWorker.ts:11-27`. `rg` no encuentra `vite-plugin-pwa` ni Workbox |
-| Bundler y paymaster no están verificados ni configurados | `docs/01-arquitectura.md:17`; `env.example:84-89`; `README.md:205` |
+| No hay bundler, y es una decisión: `handleOps` del EntryPoint v0.7 es `public` y sin control de acceso, así que el relayer propio envía directo. El paymaster sigue sin desplegar ni financiar | `docs/01-arquitectura.md`; `env.example`, bloque `ERC-4337`; `README.md` |
 | La Fase 5 sigue entera sin marcar | Lectura de `docs/18-tareas-por-fases.md:100-113` |
 | D-31 no estaba en uso | `rg "D-31" docs/` sin resultados antes de escribir este documento |
 
