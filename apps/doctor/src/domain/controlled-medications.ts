@@ -12,8 +12,37 @@
  * D-07 still holds: no commercial product is named here; the entries are
  * active ingredients with their WHO ATC codes.
  *
- * Pure data, no behaviour. Editing helpers live in presentation/draft-editing.ts.
+ * Pure data and one derivation of it. Editing helpers live in
+ * presentation/draft-editing.ts.
  */
+
+/**
+ * The therapeutic families D3 groups the list by.
+ *
+ * The grouping is clinical, not decorative: a prescriber reads "benzodiazepina"
+ * as a class with shared risks, and two entries of the same family on one
+ * prescription is the duplication the rules engine looks for. Ten flat rows
+ * carry none of that.
+ */
+export type ControlledMedicationFamily =
+  | 'Opioides'
+  | 'Benzodiazepinas'
+  | 'Hipnóticos no benzodiazepínicos'
+  | 'Estimulantes';
+
+/**
+ * Display order of the families on D3.
+ *
+ * The order lives here rather than in the screen's markup so that adding a
+ * family is a data edit, and so that a family nobody assigned an entry to shows
+ * up as an empty group in the tests instead of silently vanishing from the UI.
+ */
+export const CONTROLLED_MEDICATION_FAMILIES: readonly ControlledMedicationFamily[] = [
+  'Opioides',
+  'Benzodiazepinas',
+  'Hipnóticos no benzodiazepínicos',
+  'Estimulantes',
+];
 
 export interface ControlledMedication {
   /** Stable, kebab-case identifier of the active ingredient; used for control ids. */
@@ -24,6 +53,8 @@ export interface ControlledMedication {
   atcCode: string;
   strength: string;
   doseForm: string;
+  /** Therapeutic family, which is how D3 groups the list. */
+  family: ControlledMedicationFamily;
 }
 
 export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
@@ -33,6 +64,7 @@ export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
     atcCode: 'N02AA01',
     strength: '10 mg',
     doseForm: 'comprimido',
+    family: 'Opioides',
   },
   {
     id: 'tramadol',
@@ -40,6 +72,7 @@ export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
     atcCode: 'N02AX02',
     strength: '50 mg',
     doseForm: 'cápsula',
+    family: 'Opioides',
   },
   {
     id: 'fentanilo',
@@ -47,6 +80,7 @@ export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
     atcCode: 'N02AB03',
     strength: '50 µg/h',
     doseForm: 'parche transdérmico',
+    family: 'Opioides',
   },
   {
     id: 'codeina',
@@ -54,6 +88,7 @@ export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
     atcCode: 'R05DA04',
     strength: '30 mg',
     doseForm: 'comprimido',
+    family: 'Opioides',
   },
   {
     id: 'diazepam',
@@ -61,6 +96,7 @@ export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
     atcCode: 'N05BA01',
     strength: '10 mg',
     doseForm: 'comprimido',
+    family: 'Benzodiazepinas',
   },
   {
     id: 'alprazolam',
@@ -68,6 +104,7 @@ export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
     atcCode: 'N05BA12',
     strength: '0,5 mg',
     doseForm: 'comprimido',
+    family: 'Benzodiazepinas',
   },
   {
     id: 'clonazepam',
@@ -75,6 +112,7 @@ export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
     atcCode: 'N03AE01',
     strength: '2 mg',
     doseForm: 'comprimido',
+    family: 'Benzodiazepinas',
   },
   {
     id: 'midazolam',
@@ -82,6 +120,7 @@ export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
     atcCode: 'N05CD08',
     strength: '15 mg',
     doseForm: 'comprimido',
+    family: 'Benzodiazepinas',
   },
   {
     id: 'zolpidem',
@@ -89,6 +128,7 @@ export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
     atcCode: 'N05CF02',
     strength: '10 mg',
     doseForm: 'comprimido',
+    family: 'Hipnóticos no benzodiazepínicos',
   },
   {
     id: 'metilfenidato',
@@ -96,5 +136,27 @@ export const CONTROLLED_MEDICATIONS: readonly ControlledMedication[] = [
     atcCode: 'N06BA04',
     strength: '10 mg',
     doseForm: 'comprimido',
+    family: 'Estimulantes',
   },
 ];
+
+/** One therapeutic family with the entries that belong to it, ready to render. */
+export interface ControlledMedicationGroup {
+  family: ControlledMedicationFamily;
+  medications: readonly ControlledMedication[];
+}
+
+/**
+ * The catalogue in display order, grouped by therapeutic family.
+ *
+ * Derived rather than stored so the flat list stays the single source of truth:
+ * an entry cannot be in the grouped view and missing from the flat one, and the
+ * group order is `CONTROLLED_MEDICATION_FAMILIES` rather than whatever order the
+ * markup happens to spell out.
+ */
+export function groupedControlledMedications(): readonly ControlledMedicationGroup[] {
+  return CONTROLLED_MEDICATION_FAMILIES.map((family) => ({
+    family,
+    medications: CONTROLLED_MEDICATIONS.filter((medication) => medication.family === family),
+  }));
+}
