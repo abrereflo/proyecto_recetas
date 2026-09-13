@@ -1,10 +1,14 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ALERT_COPY_ES, NEVER_BLOCKS_ES, RULESET_VERSION } from '@recetas/rules';
 import { ALERT_DISMISSAL_COPY_ES, dismissAlert } from '../../domain/alerts';
-import { CONTROLLED_MEDICATIONS } from '../../domain/controlled-medications';
+import {
+  CONTROLLED_MEDICATIONS,
+  CONTROLLED_MEDICATION_FAMILIES,
+  groupedControlledMedications,
+} from '../../domain/controlled-medications';
 import type { PrescriptionDraft } from '../../domain/draft';
 import { aDraft, anItem } from '../../test/fixtures';
 import { alertsFor, editDraft, emptyItem } from '../draft-editing';
@@ -223,6 +227,102 @@ describe('the controlled-medication catalogue', () => {
       expect(box).toHaveAccessibleName(new RegExp(medication.strength));
       expect(box).toHaveAccessibleName(new RegExp(medication.doseForm));
     }
+  });
+
+  describe('the list is grouped by therapeutic family', () => {
+    it('renders one named group per family, in the catalogue order', () => {
+      renderScreen(blankDraft());
+
+      for (const family of CONTROLLED_MEDICATION_FAMILIES) {
+        expect(screen.getByRole('group', { name: new RegExp(family) })).toBeVisible();
+      }
+    });
+
+    it('puts every medication inside the group its family names', () => {
+      renderScreen(blankDraft());
+
+      for (const group of groupedControlledMedications()) {
+        const fieldset = screen.getByRole('group', { name: new RegExp(group.family) });
+        const boxes = within(fieldset).getAllByRole('checkbox');
+
+        expect(boxes).toHaveLength(group.medications.length);
+        for (const medication of group.medications) {
+          expect(
+            within(fieldset).getByRole('checkbox', {
+              name: new RegExp(medication.activeIngredient),
+            }),
+          ).toBeVisible();
+        }
+      }
+    });
+
+    it('keeps the full accessible name on every box once grouped', () => {
+      // The grouping is presentation. A box must still announce the whole
+      // identity of what it prescribes — nothing may move into the group
+      // heading and out of the control's own name.
+      renderScreen(blankDraft());
+
+      for (const medication of CONTROLLED_MEDICATIONS) {
+        const box = screen.getByRole('checkbox', { name: new RegExp(medication.activeIngredient) });
+
+        expect(box).toHaveAccessibleName(new RegExp(medication.activeIngredient));
+        expect(box).toHaveAccessibleName(new RegExp(medication.strength));
+        expect(box).toHaveAccessibleName(new RegExp(medication.doseForm));
+        expect(box).toHaveAccessibleName(new RegExp(medication.atcCode));
+      }
+    });
+  });
+
+  describe('the live count of what is selected', () => {
+    it('says nothing is selected on a blank draft', () => {
+      renderScreen(blankDraft());
+
+      expect(screen.getByText('Ninguno seleccionado')).toBeVisible();
+    });
+
+    it('uses the singular for exactly one', async () => {
+      const { user } = renderScreen(blankDraft());
+
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+
+      expect(screen.getByText('1 seleccionado')).toBeVisible();
+    });
+
+    it('uses the plural for several, and counts them all', async () => {
+      const { user } = renderScreen(blankDraft());
+
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+      await user.click(screen.getByRole('checkbox', { name: /zolpidem/ }));
+      await user.click(screen.getByRole('checkbox', { name: /metilfenidato/ }));
+
+      expect(screen.getByText('3 seleccionados')).toBeVisible();
+    });
+
+    it('comes back down when a box is unchecked', async () => {
+      const { user } = renderScreen(blankDraft());
+
+      await user.click(screen.getByRole('checkbox', { name: /morfina/ }));
+      await user.click(screen.getByRole('checkbox', { name: /zolpidem/ }));
+      expect(screen.getByText('2 seleccionados')).toBeVisible();
+
+      await user.click(screen.getByRole('checkbox', { name: /zolpidem/ }));
+
+      expect(screen.getByText('1 seleccionado')).toBeVisible();
+    });
+
+    it('counts only what the boxes themselves wrote, not a coinciding typed line', () => {
+      // `isCatalogueItemSelected` is what decides a box is checked, so the
+      // count has to agree with it: a hand-typed line leaves the box unchecked
+      // and must leave the count at zero too.
+      renderScreen(
+        aDraft({
+          items: [anItem({ activeIngredient: 'diazepam', atcCode: 'N05BA01' })],
+        }),
+      );
+
+      expect(screen.getByRole('checkbox', { name: /diazepam/ })).not.toBeChecked();
+      expect(screen.getByText('Ninguno seleccionado')).toBeVisible();
+    });
   });
 
   it('adds a prefilled item card when one is checked', async () => {

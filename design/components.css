@@ -225,8 +225,48 @@ body {
 
 .field--invalid .field__control { border-color: var(--color-danger); }
 
-/* --- Choice list (checkbox group) ---------------------------------------- */
+/* --- Choice list (grouped catalogue of checkboxes) ------------------------
+ * Screen D3's controlled-medication picker. Ten undifferentiated rows read as
+ * a wall, so the list is grouped by therapeutic family and each option is a
+ * selectable row with its own hierarchy: the active ingredient is what the eye
+ * lands on, its presentation sits under it, and the ATC code is parked in a
+ * quiet mono pill on the right.
+ *
+ * The selected state is carried by border AND background AND the checkbox
+ * itself, so it never depends on colour alone. Every colour, space, radius and
+ * font size below is a token. The remaining literals are the ones the rest of
+ * this sheet already spells out the same way — the 1px hairline, the focus
+ * ring copied from the global rule, the badge letter-spacing, the checkbox
+ * size carried over unchanged — plus the grid column floor, which is a layout
+ * threshold rather than a spacing step.
+ * ------------------------------------------------------------------------ */
 .choice-list {
+  --choice-column-min: 18rem; /* narrower than this, rows go to one column */
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+/* Direct child only: the nested per-family legends are styled separately.
+   A legend is shrink-to-fit by default, so it needs an explicit width before
+   the title and the live count can sit at opposite ends of it. */
+.choice-list > legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+/* One therapeutic family: a nested fieldset, so the group has a real name. */
+.choice-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -236,24 +276,114 @@ body {
   min-width: 0;
 }
 
-.choice-list legend {
+.choice-group > legend {
   padding: 0;
-  margin-bottom: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Two columns where there is room, one where there is not.
+   The `min(..., 100%)` is load-bearing, not decoration: a bare minmax floor
+   stays at its floor even when the container is narrower than it, which is
+   exactly how an `auto-fit` grid ends up scrolling the page sideways on a
+   small phone. Clamping the floor to the container width forbids that. */
+.choice-group__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--choice-column-min), 100%), 1fr));
+  gap: var(--space-3);
 }
 
 .choice {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: var(--touch-target);
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
-.choice input {
+/* The label IS the row, so the whole card is the hit area, not just the box. */
+.choice__option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--ease),
+    background-color var(--motion-fast) var(--ease);
+}
+
+.choice__option:hover { border-color: var(--color-border-strong); }
+
+/* Focus is never removed, only moved outward: when the box takes VISIBLE focus
+   the ring is drawn around the whole row, which is the thing about to toggle.
+   `:focus-visible` rather than `:focus-within` so a mouse click on the row does
+   not light it up. */
+.choice__option:has(.choice__box:focus-visible) {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The row now carries the ring, so the box does not draw a second one inside
+   it. Both rules are gated on `:has`, so a browser without it simply keeps the
+   box's own ring from the global rule: focus stays visible either way. */
+.choice__option:has(.choice__box:focus-visible) .choice__box:focus-visible {
+  outline: none;
+}
+
+.choice__option--selected {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+}
+
+.choice__box {
   width: 1.25rem;
   height: 1.25rem;
   flex-shrink: 0;
+  margin: 0;
   accent-color: var(--color-accent);
 }
+
+.choice__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.choice__name {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  line-height: var(--leading-tight);
+}
+
+.choice__presentation {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.choice__atc {
+  flex-shrink: 0;
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-xs);
+}
+
+/* The "unchecking will not clear this" note, aligned under the row it explains. */
+.choice__note { margin: 0; padding-left: var(--space-3); }
 
 /* --- Status badge --------------------------------------------------------- */
 .badge {

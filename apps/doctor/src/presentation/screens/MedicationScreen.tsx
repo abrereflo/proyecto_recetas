@@ -6,7 +6,10 @@ import {
   partitionAlerts,
   type PresentedAlert,
 } from '../../domain/alerts';
-import { CONTROLLED_MEDICATIONS } from '../../domain/controlled-medications';
+import {
+  CONTROLLED_MEDICATIONS,
+  groupedControlledMedications,
+} from '../../domain/controlled-medications';
 import { validateDraft, type DraftIssue, type PrescriptionDraft } from '../../domain/draft';
 import { AlertCard } from '../components/AlertCard';
 import { Field } from '../components/Field';
@@ -98,6 +101,12 @@ export function MedicationScreen({
     if (raw !== undefined) onCriticalAlert(raw);
   };
 
+  // Read off the draft with the same predicate that decides whether each box
+  // renders checked, so the count cannot disagree with the rows under it.
+  const selectedCount = CONTROLLED_MEDICATIONS.filter((medication) =>
+    isCatalogueItemSelected(draft, medication),
+  ).length;
+
   return (
     <ScreenShell
       status={<span className="badge badge--info">Receta en borrador</span>}
@@ -116,48 +125,76 @@ export function MedicationScreen({
 
         <section className="card">
           <fieldset className="choice-list">
-            <legend className="title-section">Medicamentos controlados</legend>
+            <legend>
+              <span className="title-section">Medicamentos controlados</span>
+              {/* The count is the one piece of state the collapsed groups cannot
+                  show at a glance, so it is stated in words rather than left to
+                  be counted off the rows. */}
+              <span className="badge badge--neutral">{selectionSummary(selectedCount)}</span>
+            </legend>
             <p className="text-secondary">
               Marque uno o varios. Cada medicamento marcado se añade como ítem; complete cantidad y
               posología más abajo.
             </p>
 
-            {CONTROLLED_MEDICATIONS.map((medication) => {
-              const id = `controlled-${medication.id}`;
-              const noteId = `${id}-note`;
-              // The box is checked but clicking it will not clear it: the
-              // doctor has written on that line and `toggleCatalogueItem`
-              // refuses to delete their work. Saying so beside the control,
-              // tied to it by `aria-describedby`, is what keeps that refusal
-              // from reading as a broken checkbox — and the sentence carries
-              // the meaning on its own, without relying on colour.
-              const selected = isCatalogueItemSelected(draft, medication);
-              const locked = selected && hasDoctorEnteredWork(draft, medication);
+            {/* Grouped by therapeutic family, in the order the catalogue
+                declares (domain/controlled-medications.ts). Each group is a
+                nested fieldset, so its legend names it for a screen reader
+                exactly as the heading names it on screen. */}
+            {groupedControlledMedications().map((group) => (
+              <fieldset className="choice-group" key={group.family}>
+                <legend>{group.family}</legend>
 
-              return (
-                <div key={medication.id}>
-                  <div className="choice">
-                    <input
-                      checked={selected}
-                      id={id}
-                      onChange={() => onDraftChange(toggleCatalogueItem(draft, medication))}
-                      type="checkbox"
-                      {...(locked ? { 'aria-describedby': noteId } : {})}
-                    />
-                    <label htmlFor={id}>
-                      {medication.activeIngredient} {medication.strength}, {medication.doseForm}{' '}
-                      <span className="mono">{medication.atcCode}</span>
-                    </label>
-                  </div>
-                  {locked && (
-                    <p className="field__hint" id={noteId}>
-                      Este medicamento ya tiene cantidad y posología suyas. Para retirarlo, use el
-                      botón «Quitar ítem» de su ficha.
-                    </p>
-                  )}
+                <div className="choice-group__options">
+                  {group.medications.map((medication) => {
+                    const id = `controlled-${medication.id}`;
+                    const noteId = `${id}-note`;
+                    // The box is checked but clicking it will not clear it: the
+                    // doctor has written on that line and `toggleCatalogueItem`
+                    // refuses to delete their work. Saying so beside the control,
+                    // tied to it by `aria-describedby`, is what keeps that refusal
+                    // from reading as a broken checkbox — and the sentence carries
+                    // the meaning on its own, without relying on colour.
+                    const selected = isCatalogueItemSelected(draft, medication);
+                    const locked = selected && hasDoctorEnteredWork(draft, medication);
+
+                    return (
+                      <div className="choice" key={medication.id}>
+                        {/* The label is the row, so the whole card is the hit
+                            area. The checked box inside it is the redundant,
+                            non-colour signal of the selected state. */}
+                        <label
+                          className={`choice__option${selected ? ' choice__option--selected' : ''}`}
+                          htmlFor={id}
+                        >
+                          <input
+                            checked={selected}
+                            className="choice__box"
+                            id={id}
+                            onChange={() => onDraftChange(toggleCatalogueItem(draft, medication))}
+                            type="checkbox"
+                            {...(locked ? { 'aria-describedby': noteId } : {})}
+                          />
+                          <span className="choice__text">
+                            <span className="choice__name">{medication.activeIngredient}</span>
+                            <span className="choice__presentation">
+                              {medication.strength}, {medication.doseForm}
+                            </span>
+                          </span>{' '}
+                          <span className="choice__atc">{medication.atcCode}</span>
+                        </label>
+                        {locked && (
+                          <p className="field__hint choice__note" id={noteId}>
+                            Este medicamento ya tiene cantidad y posología suyas. Para retirarlo, use
+                            el botón «Quitar ítem» de su ficha.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </fieldset>
+            ))}
           </fieldset>
         </section>
 
@@ -352,6 +389,18 @@ export function MedicationScreen({
       </div>
     </ScreenShell>
   );
+}
+
+/**
+ * How many catalogue medications are currently checked, in words.
+ *
+ * Spelled out rather than rendered as a bare number so the badge reads as a
+ * sentence, and so the zero case says something ("Ninguno seleccionado")
+ * instead of showing a "0" the doctor has to interpret.
+ */
+function selectionSummary(count: number): string {
+  if (count === 0) return 'Ninguno seleccionado';
+  return count === 1 ? '1 seleccionado' : `${count} seleccionados`;
 }
 
 /** The form problems this screen owns. The rest belong to D2. */
